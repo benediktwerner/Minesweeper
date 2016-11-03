@@ -1,6 +1,7 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.Point;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -19,6 +20,9 @@ public class Game {
 		this.height = height;
 		this.bombs = bombs;
 		generated = false;
+		
+		board = new int[height][width];
+		visible = new boolean[height][width];
 	}
 	
 	private void generate(Point start) {
@@ -76,6 +80,15 @@ public class Game {
 	
 	private void gameOver() {
 		gameOver = true;
+		for (int x = 0; x < visible.length; x++) {
+			for (int y = 0; y < visible[x].length; y++) {
+				visible[x][y] = true;
+			}
+		}
+	}
+	
+	public boolean isGameOver() {
+		return gameOver;
 	}
 	
 	private void floodOpen(int x, int y) {
@@ -103,7 +116,7 @@ public class Game {
 	}
 	
 	public boolean isWon() {
-		return openSquares == squaresToOpen;
+		return generated && openSquares == squaresToOpen;
 	}
 	
 	private boolean getVisible(Point p) {
@@ -162,5 +175,9 @@ public class Game {
 	
 	public boolean[][] getVisible() {
 		return visible;
+	}
+	
+	public int getTotalBombCount() {
+		return bombs;
 	}
 }
