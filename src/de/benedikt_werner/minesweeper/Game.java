@@ -126,7 +126,7 @@ public class Game {
 		return board[p.x][p.y];
 	}
 	
-	public void printBoard(boolean showAll) {
+	public void printBoard(boolean showAll, boolean[][] flags) {
 		String line = "+";
 		for (int i = 0; i < board[0].length; i++) {
 			line += "-";
@@ -137,7 +137,8 @@ public class Game {
 			String s = "|";
 			for (int y = 0; y < board[x].length; y++) {
 				if (!showAll && !visible[x][y]) {
-					s += "ï¿½";
+					if (flags != null && flags[x][y]) s += "P";
+					else s += "°";
 					continue;
 				}
 				
@@ -150,6 +151,10 @@ public class Game {
 			System.out.println(s + "|");
 		}
 		System.out.println(line + "+");
+	}
+	
+	public void printBoard(boolean showAll) {
+		printBoard(showAll, null);
 	}
 	
 	private void placeBomb(Point position) {
@@ -166,6 +171,10 @@ public class Game {
 				board[x][y]++;
 			}
 		}
+	}
+	
+	public boolean isVisible(int x, int y) {
+		return visible[x][y];
 	}
 	
 	public int[][] getBoard() {
