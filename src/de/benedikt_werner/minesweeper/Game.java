@@ -1,7 +1,6 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.Point;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -138,7 +137,7 @@ public class Game {
 			String s = "|";
 			for (int y = 0; y < board[x].length; y++) {
 				if (!showAll && !visible[x][y]) {
-					s += "°";
+					s += "ï¿½";
 					continue;
 				}
 				
