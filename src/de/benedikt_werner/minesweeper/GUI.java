@@ -27,7 +27,6 @@ public class GUI {
 	private JLabel lblBombCount;
 	private JButton[][] buttons = new JButton[0][0];
 	
-	private boolean[][] flags;
 	private HashMap<JButton, Point> buttonMap;
 	
 	public static void main(String[] args) {
@@ -68,7 +67,6 @@ public class GUI {
 		btnNewGame.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				btnNewGame.setVisible(false);
 				newGame();
 			}
 		});
@@ -77,27 +75,30 @@ public class GUI {
 		lblBombCount = new JLabel("0");
 		lblBombCount.setBounds(0, 0, 100, 20);
 		frame.getContentPane().add(lblBombCount);
-	}
+	}	
 	
 	private void newGame() {
 		int width, height, bombs;
 		try {
 			String strWidth = JOptionPane.showInputDialog("Enter board width: ", "10");
+			if (strWidth == null) return;
 			width =  Integer.parseInt(strWidth);
 			String strHeight = JOptionPane.showInputDialog("Enter board height: ", "10");
+			if (strHeight == null) return;
 			height = Integer.parseInt(strHeight);
 			String strBombs = JOptionPane.showInputDialog("Enter bombs: ", "" + (int) (height * width * 0.15));
+			if (strBombs == null) return;
 			bombs = Integer.parseInt(strBombs);
 		}
 		catch (NumberFormatException e) {
-			gameFinished("Invalid value!");
+			JOptionPane.showMessageDialog(frame, "Invalid value!");
 			return;
 		}
 		
+		btnNewGame.setVisible(false);
 		game.setup(width, height, bombs);
 
 		buttons = new JButton[height][width];
-		flags = new boolean[height][width];
 		buttonMap = new HashMap<>();
 		
 		for (int x = 0; x < height; x++) {
@@ -118,19 +119,14 @@ public class GUI {
 					public void mouseClicked(MouseEvent e) {
 						Point p = buttonMap.get((JButton) e.getSource());
 						if (e.getButton() == MouseEvent.BUTTON1) {
-							if (flags[p.x][p.y]) return;
-							
-							if (!game.click(p)) {
-								gameFinished("GAME OVER!");
-								return;
-							}
-
-							if (game.isWon()) {
-								gameFinished("You won!");
+							game.click(p);
+							if (game.isGameOver()) {
+								if (game.isWon()) gameFinished("You won!");
+								else gameFinished("GAME OVER!");
 								return;
 							}
 						} else {
-							flags[p.x][p.y] = !flags[p.x][p.y];
+							game.flag(p.x, p.y);
 						}
 						redrawGame();
 					}
@@ -160,34 +156,30 @@ public class GUI {
 	
 	private void redrawGame() {
 		int[][] board = game.getBoard();
-		boolean[][] visible =  game.getVisible();
 		
 		int flagCount = 0;
+		boolean gameOver = game.isGameOver();
 		
 		for (int x = 0; x < board.length; x++) {
 			for (int y = 0; y < board[x].length; y++) {
-				if (visible[x][y]) {
-					if  (board[x][y] == -1) {
-						buttons[x][y].setText("X");
+				switch (board[x][y]) {
+					case -2:
+						buttons[x][y].setText("");
+						buttons[x][y].setBackground(Color.CYAN);
+						break;
+					case -1:
+						buttons[x][y].setText(gameOver ? "X" : "F");
 						buttons[x][y].setBackground(Color.RED);
-					}
-					else if (flags[x][y]) {
-						buttons[x][y].setText(board[x][y] == 0 ? "" : board[x][y] + "");
-						buttons[x][y].setBackground(Color.GREEN);
-					}
-					else {
-						buttons[x][y].setText(board[x][y] == 0 ? "" : board[x][y] + "");
+						flagCount++;
+						break;
+					case 0:
+						buttons[x][y].setText("");
 						buttons[x][y].setBackground(Color.WHITE);
-					}
-				}
-				else if (flags[x][y]) {
-					buttons[x][y].setText("F");
-					buttons[x][y].setBackground(Color.RED);
-					flagCount++;
-				}
-				else {
-					buttons[x][y].setText("");
-					buttons[x][y].setBackground(Color.CYAN);
+						break;
+					default:
+						buttons[x][y].setText(board[x][y] + "");
+						buttons[x][y].setBackground(Color.WHITE);
+						break;
 				}
 			}
 		}
