@@ -126,7 +126,7 @@ public class GUI {
 								return;
 							}
 						} else {
-							game.flag(p.x, p.y);
+							game.switchFlag(p.x, p.y);
 						}
 						redrawGame();
 					}

@@ -70,7 +70,12 @@ public class Game implements Minesweeper {
 		}
 	}
 	
-	public void flag(int x, int y) {
+	public void flag(int x, int y, boolean flag) {
+		if (visibleBoard[x][y] == -1 || visibleBoard[x][y] == -2)
+			visibleBoard[x][y] = flag ? -1 : -2;
+	}
+	
+	public void switchFlag(int x, int y) {
 		if (visibleBoard[x][y] == -1) visibleBoard[x][y] = -2;
 		else if (visibleBoard[x][y] == -2) visibleBoard[x][y] = -1;
 	}
@@ -142,7 +147,7 @@ public class Game implements Minesweeper {
 				}
 				else {
 					switch (visibleBoard[x][y]) {
-						case -2: s += "°";
+						case -2: s += "°"; break;
 						case -1: s += "P"; break;
 						case  0: s += " "; break;
 						default: s += visibleBoard[x][y] + "";
