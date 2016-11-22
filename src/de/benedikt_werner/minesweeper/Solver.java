@@ -19,7 +19,7 @@ public class Solver {
 	private HashSet<boolean[]> combinations;
 	private ArrayList<Point> borderList;
 	private Minesweeper ms;
-	private int width, height, bombsLeft;
+	private int width, height, bombsLeft, noBoardCounter;
 	private boolean changeMade, recurseComplete;
 
 	public static void main(String[] args) {
@@ -41,11 +41,12 @@ public class Solver {
 		flags = new boolean[width][height];
 		solved = new boolean[width][height];
 		bombsAround = new int[width][height];
+		noBoardCounter = 0;
 		
 		// Start solving
 		ms.click(width / 2, height / 2);
 
-		while (!ms.isGameOver()) {
+		while (!ms.isGameOver() && noBoardCounter < 10) {
 			nextMove();
 		}
 	}
@@ -55,6 +56,17 @@ public class Solver {
 		board =  ms.getBoard();
 		borderSquares = new HashSet<>();
 		unopendSquares = new HashSet<>();
+		
+		if (board == null) {
+			noBoardCounter++;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			return;
+		}
+		else noBoardCounter = 0;
 		
 		// Try simple deduction
 		for (int x = 0; x < board.length; x++) {
