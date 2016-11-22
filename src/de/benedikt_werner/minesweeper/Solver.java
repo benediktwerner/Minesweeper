@@ -44,7 +44,7 @@ public class Solver {
 		noBoardCounter = 0;
 		
 		// Start solving
-		ms.click(width / 2, height / 2);
+		click(new Point(width / 2, height / 2), "Startup");
 
 		while (!ms.isGameOver() && noBoardCounter < 10) {
 			nextMove();
@@ -98,14 +98,14 @@ public class Solver {
 			System.out.println("Backtrack solver finished after " + (totalTime / 1000000000.0) + "s");
 			
 			if (changeMade) return;
+			
+			// Still no change. Click randomly
+			System.out.println("No deduction possible! Clicking square with best probability.");
+			clickRandom();
 		}
 		else {
 			System.out.println("No border squares found");
 		}
-		
-		// Still no change. Click randomly
-		System.out.println("No deduction possible! Clicking square with best probability.");
-		clickRandom();
 	}
 	
 	private void backtrackSolver() {
@@ -239,7 +239,7 @@ public class Solver {
 	}
 	
 	private void clickRandom() {
-		printWithFlags();
+		//printWithFlags();
 		
 		int[] probability = new int[borderList.size()];
 		for (boolean[] ba : combinations) {

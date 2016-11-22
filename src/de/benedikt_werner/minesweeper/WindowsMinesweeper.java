@@ -20,6 +20,8 @@ import com.sun.jna.win32.W32APIOptions;
 
 public class WindowsMinesweeper implements Minesweeper {
 	
+	private static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
+	
 	private Robot robot;
 	private boolean boardDetected = false;
 	private int width = 0, height = 0, totalBombs = 0;
@@ -32,6 +34,32 @@ public class WindowsMinesweeper implements Minesweeper {
 		System.out.println("Taking screenshot in 3 seconds...");
 		Thread.sleep(3000);
 		ms.detect();
+		
+		Solver solver = new Solver();
+		solver.solve(ms);
+		
+		if (true) return;
+		int[][] board = ms.getBoard();
+
+		String line = "+";
+		for (int i = 0; i < board.length; i++) {
+			line += "-";
+		}
+		System.out.println(line + "+");
+		
+		for (int y = 0; y < board[0].length; y++) {
+			String s = "|";
+			for (int x = 0; x < board.length; x++) {
+				switch (board[x][y]) {
+					case -2: s += "*"; break;
+					case -1: s += "X"; break;
+					case  0: s += " "; break;
+					default: s += board[x][y] + "";
+				}
+			}
+			System.out.println(s + "|");
+		}
+		System.out.println(line + "+");
 	}
 	
 	public WindowsMinesweeper() {
@@ -43,37 +71,75 @@ public class WindowsMinesweeper implements Minesweeper {
 	}
 	
 	public void detect() {
+		// Find winodw
 		windowLocation = getWindowLocation("Minesweeper");
 		if (windowLocation == null) {
 			System.out.println("No Minesweper window found!");
 			return;
 		}
 		
-		BufferedImage img = takeScreenShot();
+		// Find top left corner
+		boolean foundCorner = false;
+		BufferedImage img = takeScreenshot();
 		for (int y = 0; y < img.getHeight(); y++) {
 			for (int x = 0; x < img.getWidth(); x++) {
 				Color c = new Color(img.getRGB(x, y));
-				// TODO: If black: top left corner
-				// TODO: go down and right to find other corner
+				if (isBlack(c)) {
+					topLeft = new Point(x, y);
+					foundCorner = true;
+					break;
+				}
 			}
+			if (foundCorner) break;
 		}
 		
-		width = readInt("Width: ");
-		height = readInt("Height: ");
-		totalBombs = readInt("Bombs: ");
+		//Find bottom left corner
+		int rightX = -1, bottomY = -1;
+		for (int x = topLeft.x; x < img.getWidth(); x++) {
+			if (!isBlack(new Color(img.getRGB(x, topLeft.y)))) {
+				rightX = x - 1;
+				break;
+			}
+		}
+		for (int y = topLeft.y; y < img.getWidth(); y++) {
+			if (!isBlack(new Color(img.getRGB(topLeft.x, y)))) {
+				bottomY = y - 1;
+				break;
+			}
+		}
+		if (rightX == -1) rightX = img.getWidth() - 1;
+		if (bottomY == -1) bottomY = img.getHeight() - 1;
+		bottomRight = new Point(rightX, bottomY);
 		
-		squareWidth = Math.round((bottomRight.y - topLeft.y) / height);
+		System.out.printf("(%d|%d)(%d|%d)\n", topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
+		//saveImage(img);
+		//saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
+		
+		// Calculate values
+		width = readInt("Width: ");
+		if (width == -1) return;
+		height = readInt("Height: ");
+		if (height == -1) return;
+		totalBombs = readInt("Bombs: ");
+		if (totalBombs == -1) return;
+		
+		squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
 		halfSquareWidth = squareWidth / 2;
 		boardDetected = true;
+
+		System.out.println(squareWidth + ", " + halfSquareWidth);
+//		int x = topLeft.x + squareWidth + halfSquareWidth;
+//		int y = topLeft.y + squareWidth + halfSquareWidth;
+//		saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
 	}
 
 	public void click(int x, int y) {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
 		try {
-			robot.mouseMove(topLeft.x + (x * squareWidth) + (squareWidth / 2), topLeft.y + (y * squareWidth) + (squareWidth / 2));
-			Thread.sleep(300);
+			moveMouse(x, y);
+			//robot.mouseMove(windowLocation.x + topLeft.x + (x * squareWidth) + halfSquareWidth, windowLocation.y + topLeft.y + (y * squareWidth) + halfSquareWidth);
 			robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-			Thread.sleep(300);
+			Thread.sleep(10);
 			robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -86,10 +152,10 @@ public class WindowsMinesweeper implements Minesweeper {
 	public void flag(int x, int y, boolean flag) {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
 		try {
-			robot.mouseMove(topLeft.x + (x * squareWidth) + (squareWidth / 2), topLeft.y + (y * squareWidth) + (squareWidth / 2));
-			Thread.sleep(300);
+			moveMouse(x, y);
+			//robot.mouseMove(windowLocation.x + topLeft.x + (x * squareWidth) + halfSquareWidth, windowLocation.y + topLeft.y + (y * squareWidth) + halfSquareWidth);
 			robot.mousePress(InputEvent.BUTTON2_DOWN_MASK);
-			Thread.sleep(300);
+			Thread.sleep(10);
 			robot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -99,33 +165,165 @@ public class WindowsMinesweeper implements Minesweeper {
 	public boolean isGameOver() {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
 		
-		BufferedImage img = takeScreenShot();
-		// TODO: detect game over dialog
+		BufferedImage img = takeScreenshot();
+		int midX = img.getWidth() / 2;
+		int midY = img.getHeight() / 2;
 		
-		return false;
+		int count = 0;
+		for (int x = midX - 30; x < midX + 30; x++) {
+			for (int y = midY - 30; y < midY + 30; y++) {
+				int rgb = img.getRGB(x, y);
+				int red = (rgb >> 16) & 0xFF;
+				int green = (rgb >> 8) & 0xFF;
+				int blue = rgb & 0xFF;
+				if (colorDifference(red, green, blue, 240, 240, 240) < 12) count++;
+			}
+		}
+		
+		return count > 2700;
 	}
 
 	public int[][] getBoard() {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
-		
-		BufferedImage img = takeScreenShot();
+
+		moveMouse(-1, -1);
+		BufferedImage img = takeScreenshot();
 		int[][] board = new int[width][height];
 		
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
-				Color c = new Color(img.getRGB(topLeft.x + x * squareWidth + halfSquareWidth, topLeft.y + y * squareWidth + halfSquareWidth));
-
-				// TODO: if ... board[x][y] = ..;
+				int i = detect_number(img, x, y);
+				if (i == -10) return null;
+				else board[x][y] = i;
 			}
 		}
 		
 		return board;
 	}
 	
-	private BufferedImage takeScreenShot(){
+	/**
+	 * @return -10: bomb, -2: unknown, -1: flag, 0: empty, 1+: number
+	 */
+	private int detect_number(BufferedImage img, int x, int y){
+		int imgX = topLeft.x + x * squareWidth + halfSquareWidth;
+		int imgY = topLeft.y + y * squareWidth + halfSquareWidth;
+
+		// Take a 15x15 area of pixels
+		int areapix[] = new int[625];
+		int count = 0;
+		for(int i = imgX-12; i <= imgX+12; i++) {
+			for(int j = imgY-12; j <= imgY+12; j++){
+				areapix[count] = img.getRGB(i,j);
+				count++;
+			}
+		}
+
+		boolean hasColorOfOneSquare = false;
+		boolean hasColorOfBlank = false;
+		boolean isRelativelyHomogenous = true;
+
+		for(int rgb : areapix){
+			int red = (rgb >> 16) & 0xFF;
+			int green = (rgb >> 8) & 0xFF;
+			int blue = rgb & 0xFF;
+
+			// Detect death
+			if(colorDifference(red, green, blue, 110,110,110) < 20)
+				return -10;
+
+			// Detect flagging of any sort
+			if(colorDifference(red,green,blue,255,0,0) < 30)
+				return -1;
+
+			if(colorDifference(red, green, blue, 65,79,188) < 10)
+				hasColorOfOneSquare = true;
+			
+			if(blue > red && blue > green &&
+					colorDifference(red, green, blue, 205,218,237) < 100){
+				hasColorOfBlank = true;
+			}
+			if(colorDifference(red, green, blue, 167,3,5) < 20) 	return 3; //detect_3_7(areapix); //TODO: check 3 <-> 7
+			if(colorDifference(red, green, blue, 29,103,4) < 20)	return 2;
+			if(colorDifference(red, green, blue, 0,0,138) < 20)		return 4;
+			if(colorDifference(red, green, blue, 124,1,3) < 20)		return 5;
+			if(colorDifference(red, green, blue, 7,122,131) < 20)	return 6;
+			if(hasColorOfOneSquare && hasColorOfBlank)				return 1;
+		}
+
+		// Determine how 'same' the area is.
+		// This is to separate the empty areas which are relatively the same from
+		// the unexplored areas which have a gradient of some sort.
+		int rgb00 = areapix[0];
+		int red00 = (rgb00 >> 16) & 0xFF;
+		int green00 = (rgb00 >> 8) & 0xFF;
+		int blue00 = rgb00 & 0xFF;
+		for(int rgb : areapix){
+			int red = (rgb >> 16) & 0xFF;
+			int green = (rgb >> 8) & 0xFF;
+			int blue = rgb & 0xFF;
+			if(colorDifference(red, green, blue, red00, green00, blue00) > 40){
+				isRelativelyHomogenous = false;
+				break;
+			}
+		}
+
+		if(hasColorOfBlank && isRelativelyHomogenous)
+			return 0;
+
+		return -2;
+	}
+	
+	private int detect_3_7(int[] areapix){
+		// Assume it's length 225 and dimensions 15x15.
+		// Classify each pixel as red or not.
+		// Since we don't have to deal with 5, we can take a greater liberty
+		// in deciding on red pixels.
+
+		boolean redx[][] = new boolean[15][15];
+		for(int k=0; k<225; k++){
+			int i = k % 15;
+			int j = k / 15;
+			int rgb = areapix[k];
+			int red = (rgb >> 16) & 0xFF;
+			int green = (rgb >> 8) & 0xFF;
+			int blue = rgb & 0xFF;
+
+			if(colorDifference(red, green, blue, 170, 0, 0) < 100)
+				redx[i][j] = true;
+		}
+
+		// . . .
+		//   x
+		for(int i=0; i<13; i++){
+			for(int j=0; j<13; j++){
+				if(!redx[i][j] && !redx[i][j+1] && !redx[i][j+2] && redx[i+1][j+1])
+					return 3;
+			}
+		}
+
+		return 7;
+	}
+	
+	private void moveMouse(int x, int y) {
+		robot.mouseMove(
+				windowLocation.x + IMAGE_OFFSET_X + topLeft.x + (x * squareWidth) + halfSquareWidth,
+				windowLocation.y + IMAGE_OFFSET_Y + topLeft.y + (y * squareWidth) + halfSquareWidth
+				);
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	int colorDifference(int r1, int g1, int b1, int r2, int g2, int b2){
+		return Math.abs(r1 - r2) + Math.abs(b1 - b2) + Math.abs(g1 - g2);
+	}
+	
+	private BufferedImage takeScreenshot(){
 		if (windowLocation == null) return null;
 		BufferedImage img = robot.createScreenCapture(windowLocation);
-		return img.getSubimage(50, 150, img.getWidth() - 100, img.getHeight() - 200);
+		return img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
 	}
 
 	private interface User32 extends StdCallLibrary {
@@ -170,7 +368,11 @@ public class WindowsMinesweeper implements Minesweeper {
 		}
 	}
 	
-	private void saveImage(BufferedImage img) {
+	private boolean isBlack(Color c) {
+		return (c.getRed() < 30 && c.getGreen() < 30 && c.getBlue() < 35);
+	}
+	
+	public static void saveImage(BufferedImage img) {
 		File file = new File("C:\\Users\\Bene\\Downloads\\Image-"+System.currentTimeMillis()+".png");
 		try {
 			ImageIO.write(img, "png", file);
