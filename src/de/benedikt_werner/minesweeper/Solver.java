@@ -44,8 +44,6 @@ public class Solver {
 		noBoardCounter = 0;
 		
 		// Start solving
-		click(new Point(width / 2, height / 2), "Startup");
-
 		while (!ms.isGameOver() && noBoardCounter < 10) {
 			nextMove();
 		}
@@ -104,7 +102,8 @@ public class Solver {
 			clickRandom();
 		}
 		else {
-			System.out.println("No border squares found");
+			System.out.println("No border squares found!");
+			click(new Point(width / 2, height / 2), "Startup");
 		}
 	}
 	
@@ -120,9 +119,9 @@ public class Solver {
 		recurseCombinations(borderBombs, 0, 0);
 		
 		if (combinations.isEmpty()) {
-			flagAll();
-			((Game) ms).printBoard(true);
-			((Game) ms).printBoard(false);
+//			flagAll();
+//			((Game) ms).printBoard(true);
+//			((Game) ms).printBoard(false);
 			throw new IllegalStateException("No possible combinations found!");
 		}
 		
@@ -180,7 +179,7 @@ public class Solver {
 		
 		if (combinationPerfect) {
 			if (!recurseComplete || bombs == bombsLeft) {
-				System.out.println("Found combination!");
+				//System.out.println("Found combination!");
 				combinations.add(borderBombs.clone());
 			}
 			return;
@@ -231,7 +230,9 @@ public class Solver {
 	}
 	
 	private void flag(Point p, String tag) {
+		if (flags[p.x][p.y]) return;
 		System.out.println(String.format("[" + tag + "]: Flagging %d|%d", p.x, p.y));
+		ms.flag(p, true);
 		changeMade = true;
 		flags[p.x][p.y] = true;
 		solved[p.x][p.y] = true;

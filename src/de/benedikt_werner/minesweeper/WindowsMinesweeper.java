@@ -39,27 +39,6 @@ public class WindowsMinesweeper implements Minesweeper {
 		solver.solve(ms);
 		
 		if (true) return;
-		int[][] board = ms.getBoard();
-
-		String line = "+";
-		for (int i = 0; i < board.length; i++) {
-			line += "-";
-		}
-		System.out.println(line + "+");
-		
-		for (int y = 0; y < board[0].length; y++) {
-			String s = "|";
-			for (int x = 0; x < board.length; x++) {
-				switch (board[x][y]) {
-					case -2: s += "*"; break;
-					case -1: s += "X"; break;
-					case  0: s += " "; break;
-					default: s += board[x][y] + "";
-				}
-			}
-			System.out.println(s + "|");
-		}
-		System.out.println(line + "+");
 	}
 	
 	public WindowsMinesweeper() {
@@ -142,6 +121,7 @@ public class WindowsMinesweeper implements Minesweeper {
 			robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
 			Thread.sleep(10);
 			robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+			Thread.sleep(10);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -155,9 +135,9 @@ public class WindowsMinesweeper implements Minesweeper {
 		try {
 			moveMouse(x, y);
 			//robot.mouseMove(windowLocation.x + topLeft.x + (x * squareWidth) + halfSquareWidth, windowLocation.y + topLeft.y + (y * squareWidth) + halfSquareWidth);
-			robot.mousePress(InputEvent.BUTTON2_DOWN_MASK);
+			robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
 			Thread.sleep(10);
-			robot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
+			robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -181,7 +161,7 @@ public class WindowsMinesweeper implements Minesweeper {
 			}
 		}
 		
-		return count > 2700;
+		return count > 1800;
 	}
 
 	public int[][] getBoard() {
@@ -198,6 +178,27 @@ public class WindowsMinesweeper implements Minesweeper {
 				else board[x][y] = i;
 			}
 		}
+
+		// Print
+		String line = "+";
+		for (int i = 0; i < board.length; i++) {
+			line += "-";
+		}
+		System.out.println(line + "+");
+		
+		for (int y = 0; y < board[0].length; y++) {
+			String s = "|";
+			for (int x = 0; x < board.length; x++) {
+				switch (board[x][y]) {
+					case -2: s += "*"; break;
+					case -1: s += "X"; break;
+					case  0: s += " "; break;
+					default: s += board[x][y] + "";
+				}
+			}
+			System.out.println(s + "|");
+		}
+		System.out.println(line + "+");
 		
 		return board;
 	}
@@ -236,18 +237,18 @@ public class WindowsMinesweeper implements Minesweeper {
 			if(colorDifference(red,green,blue,255,0,0) < 30)
 				return -1;
 
-			if(colorDifference(red, green, blue, 65,79,188) < 10)
+			if(colorDifference(red, green, blue, 65,79,188) < 20)
 				hasColorOfOneSquare = true;
 			
-			if(blue > red && blue > green &&
-					colorDifference(red, green, blue, 205,218,237) < 100){
+			if(blue > red && blue > green && green > red &&
+					colorDifference(red, green, blue, 200,210,230) < 100){
 				hasColorOfBlank = true;
 			}
-			if(colorDifference(red, green, blue, 167,3,5) < 20) 	return 3; //detect_3_7(areapix); //TODO: check 3 <-> 7
-			if(colorDifference(red, green, blue, 29,103,4) < 20)	return 2;
-			if(colorDifference(red, green, blue, 0,0,138) < 20)		return 4;
-			if(colorDifference(red, green, blue, 124,1,3) < 20)		return 5;
-			if(colorDifference(red, green, blue, 7,122,131) < 20)	return 6;
+			if(colorDifference(red, green, blue, 165,5,5) < 30) 	return 3; //detect_3_7(areapix); //TODO: check 3 <-> 7
+			if(colorDifference(red, green, blue, 30,105,5) < 30)	return 2;
+			if(colorDifference(red, green, blue, 0,0,140) < 30)		return 4;
+			if(colorDifference(red, green, blue, 125,0,5) < 30)		return 5;
+			if(colorDifference(red, green, blue, 10,120,130) < 30)	return 6;
 			if(hasColorOfOneSquare && hasColorOfBlank)				return 1;
 		}
 
@@ -262,7 +263,7 @@ public class WindowsMinesweeper implements Minesweeper {
 			int red = (rgb >> 16) & 0xFF;
 			int green = (rgb >> 8) & 0xFF;
 			int blue = rgb & 0xFF;
-			if(colorDifference(red, green, blue, red00, green00, blue00) > 40){
+			if(colorDifference(red, green, blue, red00, green00, blue00) > 50){
 				isRelativelyHomogenous = false;
 				break;
 			}
