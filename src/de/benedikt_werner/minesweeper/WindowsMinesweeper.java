@@ -33,7 +33,7 @@ public class WindowsMinesweeper implements Minesweeper {
 		WindowsMinesweeper ms = new WindowsMinesweeper();
 		System.out.println("Taking screenshot in 3 seconds...");
 		Thread.sleep(3000);
-		ms.detect();
+		if (!ms.detect()) return;
 		
 		Solver solver = new Solver();
 		solver.solve(ms);
@@ -70,12 +70,12 @@ public class WindowsMinesweeper implements Minesweeper {
 		}
 	}
 	
-	public void detect() {
+	public boolean detect() {
 		// Find winodw
 		windowLocation = getWindowLocation("Minesweeper");
 		if (windowLocation == null) {
 			System.out.println("No Minesweper window found!");
-			return;
+			return false;
 		}
 		
 		// Find top left corner
@@ -117,11 +117,11 @@ public class WindowsMinesweeper implements Minesweeper {
 		
 		// Calculate values
 		width = readInt("Width: ");
-		if (width == -1) return;
+		if (width == -1) return false;
 		height = readInt("Height: ");
-		if (height == -1) return;
+		if (height == -1) return false;
 		totalBombs = readInt("Bombs: ");
-		if (totalBombs == -1) return;
+		if (totalBombs == -1) return false;
 		
 		squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
 		halfSquareWidth = squareWidth / 2;
@@ -131,6 +131,7 @@ public class WindowsMinesweeper implements Minesweeper {
 //		int x = topLeft.x + squareWidth + halfSquareWidth;
 //		int y = topLeft.y + squareWidth + halfSquareWidth;
 //		saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
+		return true;
 	}
 
 	public void click(int x, int y) {
@@ -310,7 +311,7 @@ public class WindowsMinesweeper implements Minesweeper {
 				windowLocation.y + IMAGE_OFFSET_Y + topLeft.y + (y * squareWidth) + halfSquareWidth
 				);
 		try {
-			Thread.sleep(100);
+			Thread.sleep(10);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
