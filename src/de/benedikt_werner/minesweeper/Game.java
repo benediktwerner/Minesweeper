@@ -75,6 +75,24 @@ public class Game implements Minesweeper {
 			visibleBoard[x][y] = flag ? -1 : -2;
 	}
 	
+	public void chord(int x, int y) {
+		if (visibleBoard[x][y] > 0) {
+			final int maxX = x < width - 1 ? x + 2 : width;
+			final int maxY = y < height - 1 ? y + 2 : height;
+			int bombsAround = 0;
+			
+			// Get information about surrounding squares
+			for (int i = (x > 0 ? x - 1 : 0); i < maxX; i++)
+				for (int j = (y > 0 ? y - 1 : 0); j < maxY; j++)
+					if (visibleBoard[i][j] == -1) bombsAround++;
+			if (bombsAround == visibleBoard[x][y]) {
+				for (int i = (x > 0 ? x - 1 : 0); i < maxX; i++)
+					for (int j = (y > 0 ? y - 1 : 0); j < maxY; j++)
+						if (visibleBoard[i][j] == -2) click(i,j);
+			}
+		}
+	}
+	
 	public void switchFlag(int x, int y) {
 		if (visibleBoard[x][y] == -1) visibleBoard[x][y] = -2;
 		else if (visibleBoard[x][y] == -2) visibleBoard[x][y] = -1;

@@ -1,7 +1,6 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.AWTException;
-import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Robot;
@@ -21,6 +20,9 @@ import com.sun.jna.win32.W32APIOptions;
 public class WindowsMinesweeper implements Minesweeper {
 	
 	private static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
+	private static final int DELAY_BETWEEN_CLICKS = 10;
+	private static final int DELAY_AFTER_CLICKS = 25;
+	private static final int DELAY_AFTER_MOUSE_MOVE = 10;
 	
 	private Robot robot;
 	private boolean boardDetected = false;
@@ -37,8 +39,6 @@ public class WindowsMinesweeper implements Minesweeper {
 		
 		Solver solver = new Solver();
 		solver.solve(ms);
-		
-		if (true) return;
 	}
 	
 	public WindowsMinesweeper() {
@@ -50,7 +50,7 @@ public class WindowsMinesweeper implements Minesweeper {
 	}
 	
 	public boolean detect() {
-		// Find winodw
+		// Find window
 		windowLocation = getWindowLocation("Minesweeper");
 		if (windowLocation == null) {
 			System.out.println("No Minesweper window found!");
@@ -62,8 +62,7 @@ public class WindowsMinesweeper implements Minesweeper {
 		BufferedImage img = takeScreenshot();
 		for (int y = 0; y < img.getHeight(); y++) {
 			for (int x = 0; x < img.getWidth(); x++) {
-				Color c = new Color(img.getRGB(x, y));
-				if (isBlack(c)) {
+				if (isBlack(img.getRGB(x, y))) {
 					topLeft = new Point(x, y);
 					foundCorner = true;
 					break;
@@ -71,17 +70,19 @@ public class WindowsMinesweeper implements Minesweeper {
 			}
 			if (foundCorner) break;
 		}
+		if (!foundCorner) return false;
+		System.out.printf("(%d|%d)\n", topLeft.x, topLeft.y);
 		
 		//Find bottom left corner
 		int rightX = -1, bottomY = -1;
 		for (int x = topLeft.x; x < img.getWidth(); x++) {
-			if (!isBlack(new Color(img.getRGB(x, topLeft.y)))) {
+			if (!isBlack(img.getRGB(x, topLeft.y))) {
 				rightX = x - 1;
 				break;
 			}
 		}
-		for (int y = topLeft.y; y < img.getWidth(); y++) {
-			if (!isBlack(new Color(img.getRGB(topLeft.x, y)))) {
+		for (int y = topLeft.y; y < img.getHeight(); y++) {
+			if (!isBlack(img.getRGB(topLeft.x, y))) {
 				bottomY = y - 1;
 				break;
 			}
@@ -90,23 +91,60 @@ public class WindowsMinesweeper implements Minesweeper {
 		if (bottomY == -1) bottomY = img.getHeight() - 1;
 		bottomRight = new Point(rightX, bottomY);
 		
-		System.out.printf("(%d|%d)(%d|%d)\n", topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
+		System.out.printf("(%d|%d)\n", bottomRight.x, bottomRight.y);
 		//saveImage(img);
 		//saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
 		
-		// Calculate values
-		width = readInt("Width: ");
-		if (width == -1) return false;
-		height = readInt("Height: ");
-		if (height == -1) return false;
+		//Find width and height
+		Point innerCorner = null;
+		for (int i = 1; i < 10; i++)
+			if (!isBlack(img.getRGB(topLeft.x + i, topLeft.y + i)))
+				innerCorner = new Point(topLeft.x + i, topLeft.y + i);
+		
+		// Auto detection failed
+		if (innerCorner != null) {
+			width = 0;
+			boolean onSquare = true;
+			for (int x = innerCorner.x; x <= bottomRight.x; x++) {
+				if (onSquare && isBlack(img.getRGB(x, innerCorner.y))) {
+					onSquare = false;
+					width++;
+				}
+				else if (!onSquare && !isBlack(img.getRGB(x, innerCorner.y))) {
+					onSquare = true;
+				}
+			}
+			height = 0;
+			onSquare = true;
+			for (int y = innerCorner.y; y <= bottomRight.y; y++) {
+				if (onSquare && isBlack(img.getRGB(innerCorner.x, y))) {
+					onSquare = false;
+					height++;
+				}
+				else if (!onSquare && !isBlack(img.getRGB(innerCorner.x, y))) {
+					onSquare = true;
+				}
+			}
+		}
+
+		if (innerCorner == null || width == 0 || height == 0) {
+			width = readInt("Width: ");
+			if (width == -1) return false;
+			height = readInt("Height: ");
+			if (height == -1) return false;
+		}
+		System.out.printf("%d %d\n", width, height);
+		
+		// Ask for number of bombs
 		totalBombs = readInt("Bombs: ");
 		if (totalBombs == -1) return false;
-		
+
+		// Calculate values
 		squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
 		halfSquareWidth = squareWidth / 2;
 		boardDetected = true;
 
-		System.out.println(squareWidth + ", " + halfSquareWidth);
+//		System.out.println(squareWidth + ", " + halfSquareWidth);
 //		int x = topLeft.x + squareWidth + halfSquareWidth;
 //		int y = topLeft.y + squareWidth + halfSquareWidth;
 //		saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
@@ -117,11 +155,10 @@ public class WindowsMinesweeper implements Minesweeper {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
 		try {
 			moveMouse(x, y);
-			//robot.mouseMove(windowLocation.x + topLeft.x + (x * squareWidth) + halfSquareWidth, windowLocation.y + topLeft.y + (y * squareWidth) + halfSquareWidth);
 			robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-			Thread.sleep(10);
+			Thread.sleep(DELAY_BETWEEN_CLICKS);
 			robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-			Thread.sleep(10);
+			Thread.sleep(DELAY_AFTER_CLICKS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -134,10 +171,23 @@ public class WindowsMinesweeper implements Minesweeper {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
 		try {
 			moveMouse(x, y);
-			//robot.mouseMove(windowLocation.x + topLeft.x + (x * squareWidth) + halfSquareWidth, windowLocation.y + topLeft.y + (y * squareWidth) + halfSquareWidth);
 			robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-			Thread.sleep(10);
+			Thread.sleep(DELAY_BETWEEN_CLICKS);
 			robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+			Thread.sleep(DELAY_AFTER_CLICKS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void chord(int x, int y) {
+		if (!boardDetected) throw new IllegalStateException("No detected board");
+		try {
+			moveMouse(x, y);
+			robot.mousePress(InputEvent.BUTTON3_DOWN_MASK | InputEvent.BUTTON1_DOWN_MASK);
+			Thread.sleep(DELAY_BETWEEN_CLICKS);
+			robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK | InputEvent.BUTTON1_DOWN_MASK);
+			Thread.sleep(DELAY_AFTER_CLICKS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -312,7 +362,7 @@ public class WindowsMinesweeper implements Minesweeper {
 				windowLocation.y + IMAGE_OFFSET_Y + topLeft.y + (y * squareWidth) + halfSquareWidth
 				);
 		try {
-			Thread.sleep(10);
+			Thread.sleep(DELAY_AFTER_MOUSE_MOVE);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -370,8 +420,11 @@ public class WindowsMinesweeper implements Minesweeper {
 		}
 	}
 	
-	private boolean isBlack(Color c) {
-		return (c.getRed() < 30 && c.getGreen() < 30 && c.getBlue() < 35);
+	private boolean isBlack(int i) {
+		int red = (i >> 16) & 0xFF;
+		int green = (i >> 8) & 0xFF;
+		int blue = i & 0xFF;
+		return (red < 30 && green < 30 && blue < 35);
 	}
 	
 	public static void saveImage(BufferedImage img) {

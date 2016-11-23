@@ -2,7 +2,7 @@ package de.benedikt_werner.minesweeper;
 
 import java.awt.Point;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
@@ -14,24 +14,25 @@ public class Solver {
 	private boolean[][] solved;
 	private int[][] bombsAround;
 	private int[][] board; //-2: unknown, -1: bomb, 0: empty, 1+: number
-	private HashSet<Point> borderSquares;
+	private LinkedList<HashSet<Point>> borderSquares;
 	private HashSet<Point> unopendSquares;
 	private HashSet<boolean[]> combinations;
+	private HashMap<Point, Double> bombProbability;
 	private ArrayList<Point> borderList;
 	private Minesweeper ms;
 	private int width, height, bombsLeft, noBoardCounter;
 	private boolean changeMade, recurseComplete;
 
-	public static void main(String[] args) {
-		Solver s = new Solver();
-		Game game = new Game();
-		game.setup(20, 20, 60);
-		s.solve(game);
-		game.printBoard(true);
-		game.printBoard(false);
-		System.out.println("Game over: " + game.isGameOver());
-		System.out.println("Game won: " + game.isWon());
-	}
+//	public static void main(String[] args) {
+//		Solver s = new Solver();
+//		Game game = new Game();
+//		game.setup(20, 20, 60);
+//		s.solve(game);
+//		game.printBoard(true);
+//		game.printBoard(false);
+//		System.out.println("Game over: " + game.isGameOver());
+//		System.out.println("Game won: " + game.isWon());
+//	}
 	
 	public void solve(Minesweeper minesweeper) {
 		ms = minesweeper;
@@ -44,6 +45,12 @@ public class Solver {
 		noBoardCounter = 0;
 		
 		// Start solving
+		click(new Point(width / 2, height / 2), "Startup");
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		while (!ms.isGameOver() && noBoardCounter < 10) {
 			nextMove();
 		}
@@ -52,10 +59,12 @@ public class Solver {
 	private void nextMove() {
 		changeMade = false;
 		board =  ms.getBoard();
-		borderSquares = new HashSet<>();
+		borderSquares = new LinkedList<>();
 		unopendSquares = new HashSet<>();
+		bombProbability = new HashMap<>();
 		
 		if (board == null) {
+			System.out.println("No board found!");
 			noBoardCounter++;
 			try {
 				Thread.sleep(100);
@@ -103,57 +112,116 @@ public class Solver {
 		}
 		else {
 			System.out.println("No border squares found!");
-			click(new Point(width / 2, height / 2), "Startup");
+			noBoardCounter++;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
 	private void backtrackSolver() {
-		if (recurseComplete) borderList = new ArrayList<>(unopendSquares);
-		else borderList = new ArrayList<>(borderSquares);
-		boolean[] borderBombs = new boolean[borderList.size()];
-		combinations = new HashSet<>();
-		
-		for (Point p : borderSquares) System.out.printf("(%d|%d)", p.x, p.y);
-		System.out.println();
-		
-		recurseCombinations(borderBombs, 0, 0);
-		
-		if (combinations.isEmpty()) {
-//			flagAll();
-//			((Game) ms).printBoard(true);
-//			((Game) ms).printBoard(false);
-			throw new IllegalStateException("No possible combinations found!");
+		LinkedList<HashSet<Point>> regions;
+		if (recurseComplete) {
+			regions = new LinkedList<>();
+			regions.add(unopendSquares);
 		}
+		else regions = mergeRegions();
 		
-		for (boolean[] ba : combinations) {
-			String s = "";
-			for (boolean b : ba) s += b ? "1" : "0";
-			System.out.println(s);
-		}
-		
-		boolean[] hasBomb = new boolean[borderList.size()]; // Square has at least one bomb
-		boolean[] isBomb = new boolean[borderList.size()];  // Square is definitely (always) a bomb
-		Arrays.fill(isBomb, true);
-		
-		for (boolean[] b : combinations)
-			for (int i = 0; i < b.length; i++)
-				if (b[i]) hasBomb[i] = true;
-				else isBomb[i] = false;
-		
-		for (int i = 0; i < borderBombs.length; i++) {
-			if (!hasBomb[i])
-				click(borderList.get(i), "BacktrackSolver");
-			else if (isBomb[i])
-				flag(borderList.get(i), "BacktrackSolver");
+		for (HashSet<Point> region : regions) {
+			borderList = new ArrayList<>(region);
+			boolean[] borderBombs = new boolean[borderList.size()];
+			combinations = new HashSet<>();
+			
+			System.out.print("Checking region: ");
+			for (Point p : region) System.out.printf("(%d|%d)", p.x, p.y);
+			System.out.println();
+			
+			recurseCombinations(borderBombs, 0, 0);
+			
+			if (combinations.isEmpty())
+				throw new IllegalStateException("No possible combinations found!");
+			
+			// DEBUG printing
+			for (boolean[] ba : combinations) {
+				String s = "";
+				for (boolean b : ba) s += b ? "1" : "0";
+				System.out.println(s);
+			}
+			
+			int[] bombCases = new int[borderList.size()];
+			for (boolean[] b : combinations)
+				for (int i = 0; i < b.length; i++)
+					if (b[i]) bombCases[i]++;
+			
+			for (int i = 0; i < bombCases.length; i++) {
+				if (bombCases[i] == 0)
+					click(borderList.get(i), "BacktrackSolver");
+				else if (bombCases[i] == combinations.size())
+					flag(borderList.get(i), "BacktrackSolver");
+			}
+			
+			// Compute probabilities for probability solver
+			if (!changeMade)
+				for (int i = 0; i < bombCases.length; i++)
+					bombProbability.put(borderList.get(i), bombCases[i]*100.0 / combinations.size());
 		}
 	}
 	
-	private void recurseCombinations(boolean[] borderBombs, int index, int bombs) {
-		//String s = "";
-		//for (boolean b : borderBombs) s += b ? "1" : "0";
-		//System.out.println(s + ": " + index + " " + bombs);
+	private LinkedList<HashSet<Point>> mergeRegions() {
+		System.out.printf("Merging %d regions...\n", borderSquares.size());
+		LinkedList<HashSet<Point>> regions = new LinkedList<>();
 		
-		if (bombs > bombsLeft) return;
+		while (!borderSquares.isEmpty()) {
+			HashSet<Point> newRegion = borderSquares.removeFirst();
+			LinkedList<HashSet<Point>> overlappingRegions = new LinkedList<>();
+			HashSet<Point> overlappingCombined = new HashSet<>();
+			
+			for (Point p : newRegion) {
+				for (HashSet<Point> other : borderSquares)
+					if (other.contains(p))
+						overlappingRegions.add(other);
+				for (HashSet<Point> set : overlappingRegions) {
+					overlappingCombined.addAll(set);
+					borderSquares.remove(set);
+				}
+				overlappingRegions.clear();
+			}
+			
+			while (!overlappingCombined.isEmpty()) {
+				HashSet<Point> newOverlappingCombined = new HashSet<>();
+				
+				for (Point p : overlappingCombined) {
+					for (HashSet<Point> other : borderSquares)
+						if (other.contains(p))
+							overlappingRegions.add(other);
+					for (HashSet<Point> set : overlappingRegions) {
+						newOverlappingCombined.addAll(set);
+						borderSquares.remove(set);
+					}
+					overlappingRegions.clear();
+				}
+
+				newRegion.addAll(overlappingCombined);
+				overlappingCombined = newOverlappingCombined;
+			}
+			regions.add(newRegion);
+		}
+		System.out.printf("Finished merging regions. Total number: %d\n", regions.size());
+		
+		return regions;
+	}
+	
+	private void recurseCombinations(boolean[] borderBombs, int index, int bombs) {
+//		String s = "";
+//		for (boolean b : borderBombs) s += b ? "1" : "0";
+//		System.out.println(s + ": " + index + " " + bombs);
+		
+		if (bombs > bombsLeft) {
+//			System.out.println("Too many bombs");
+			return;
+		}
 		
 		// Check combination
 		int[][] bombsAroundCopy = copy2DInt(bombsAround);
@@ -161,25 +229,33 @@ public class Solver {
 		for (int i = 0; i < borderBombs.length; i++) {
 			if (!borderBombs[i]) continue;
 			
-			Point p = borderList.get(i); 
+			Point p = borderList.get(i);
 			final int maxX = p.x < width - 1 ? p.x + 2 : width;
 			final int maxY = p.y < height - 1 ? p.y + 2 : height;
 			
-			for (int j = (p.x > 0 ? p.x - 1 : 0); j < maxX; j++)
-				for (int k = (p.y > 0 ? p.y - 1 : 0); k < maxY; k++)
-					bombsAroundCopy[j][k]++;
+			for (int x = (p.x > 0 ? p.x - 1 : 0); x < maxX; x++)
+				for (int y = (p.y > 0 ? p.y - 1 : 0); y < maxY; y++)
+					bombsAroundCopy[x][y]++;
 		}
 		
 		boolean combinationPerfect = true;
-		for (int x = 0; x < board.length; x++)
-			for (int y = 0; y < board[x].length; y++)
-				if (!solved[x][y] && board[x][y] > 0)
-					if (board[x][y] < bombsAroundCopy[x][y]) return;
-					else if (board[x][y] != bombsAroundCopy[x][y]) combinationPerfect = false;
+		for (Point p : borderList) {
+			final int maxX = p.x < width - 1 ? p.x + 2 : width;
+			final int maxY = p.y < height - 1 ? p.y + 2 : height;
+			
+			for (int x = (p.x > 0 ? p.x - 1 : 0); x < maxX; x++)
+				for (int y = (p.y > 0 ? p.y - 1 : 0); y < maxY; y++)
+					if (!solved[x][y] && board[x][y] > 0)
+						if (board[x][y] < bombsAroundCopy[x][y]) {
+//							System.out.printf("Too many bombs on %d|%d: %d", x, y, bombsAroundCopy[x][y]);
+							return;
+						}
+						else if (board[x][y] != bombsAroundCopy[x][y]) combinationPerfect = false;
+		}
 		
 		if (combinationPerfect) {
 			if (!recurseComplete || bombs == bombsLeft) {
-				//System.out.println("Found combination!");
+//				System.out.println("Found combination!");
 				combinations.add(borderBombs.clone());
 			}
 			return;
@@ -211,15 +287,18 @@ public class Solver {
 		// Evaluate information
 		if (!unopendSquares.isEmpty()) {
 			//System.out.println(String.format("%d|%d = %d - b: %d, uS: %d", x, y, board[x][y], bombsAround[x][y], unopendSquares.size()));
-			if (bombsAround[x][y] == board[x][y]) // Enough bombs marked around
-				for (Point p : unopendSquares) click(p, "SimpleSolver");
+			if (bombsAround[x][y] == board[x][y]) { // Enough bombs marked around
+				solved[x][y] = true;
+				ms.chord(x, y);//for (Point p : unopendSquares) click(p, "SimpleSolver");
+			}
 			else if (bombsAround[x][y] + unopendSquares.size() == board[x][y]) // All unknowns around must be bombs
 				for (Point p : unopendSquares) flag(p, "SimpleSolver");
 			else {
-				borderSquares.addAll(unopendSquares);
+				borderSquares.add(new HashSet<Point>(unopendSquares));
 				return false;
 			}
 		}
+		else solved[x][y] = true;
 		return true;
 	}
 	
@@ -240,30 +319,18 @@ public class Solver {
 	}
 	
 	private void clickRandom() {
-		//printWithFlags();
-		
-		int[] probability = new int[borderList.size()];
-		for (boolean[] ba : combinations) {
-			int number = 0;
-			for (boolean b : ba) if (b) number++;
-			if (number == 0) continue;
-			final int p = 100 / number;
-			for (int i = 0; i < ba.length; i++) if (ba[i]) probability[i] += p;
-		}
-		int minValue = probability[0], minIndex = 0;
-		for (int i = 1; i < probability.length; i++) {
-			if (probability[i] < minValue) {
-				minValue = probability[i];
-				minIndex = i;
+		double minProb = Double.POSITIVE_INFINITY;
+		Point minPoint = null;
+		for (Point p : bombProbability.keySet()) {
+			double prob = bombProbability.get(p);
+			System.out.printf("(%d|%d) - %.1f\n", p.x, p.y, prob);
+			if (prob < minProb) {
+				minProb = prob;
+				minPoint = p;
 			}
 		}
-		
-		for (Point p : borderList) System.out.printf("(%d|%d)", p.x, p.y);
-		System.out.println();
-		for (int i : probability) System.out.printf("%d\t", i);
-		System.out.println();
-		
-		click(borderList.get(minIndex), "ProbabilitySolver");
+		if (minPoint == null) throw new IllegalStateException("No point found to click");
+		click(minPoint, "ProbabilitySolver");
 	}
 	
 	private int[][] copy2DInt(int[][] array) {
@@ -272,19 +339,5 @@ public class Solver {
 			result[i] = array[i].clone();
 		}
 		return result;
-	}
-	
-	private void flagAll() {
-		for (int x = 0; x < flags.length; x++) {
-			for (int y = 0; y < flags[x].length; y++) {
-				if (flags[x][y]) ms.flag(x, y, true);
-			}
-		}
-	}
-	
-	private void printWithFlags() {
-		System.out.println("Bombs left: " + bombsLeft);
-		flagAll();
-		((Game) ms).printBoard(false);
 	}
 }
