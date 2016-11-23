@@ -21,7 +21,7 @@ public class Solver {
 	private ArrayList<Point> borderList;
 	private Minesweeper ms;
 	private int width, height, bombsLeft, noBoardCounter;
-	private boolean changeMade, recurseComplete;
+	private boolean changeMade, recurseComplete, didResetSolved;
 
 //	public static void main(String[] args) {
 //		Solver s = new Solver();
@@ -43,6 +43,7 @@ public class Solver {
 		solved = new boolean[width][height];
 		bombsAround = new int[width][height];
 		noBoardCounter = 0;
+		didResetSolved = false;
 		
 		// Start solving
 		click(new Point(width / 2, height / 2), "Startup");
@@ -54,6 +55,10 @@ public class Solver {
 		while (!ms.isGameOver() && noBoardCounter < 10) {
 			nextMove();
 		}
+		
+		// Finished
+		if (noBoardCounter >= 10) System.out.println("Aborted solving: Unable to detect board");
+		else System.out.println("Game ended!");
 	}
 	
 	private void nextMove() {
@@ -140,8 +145,15 @@ public class Solver {
 			
 			recurseCombinations(borderBombs, 0, 0);
 			
-			if (combinations.isEmpty())
-				throw new IllegalStateException("No possible combinations found!");
+			if (combinations.isEmpty()) {
+				if (didResetSolved) throw new IllegalStateException("No possible combinations found!");
+				else {
+					didResetSolved = true;
+					solved = new boolean[width][height];
+					return;
+				}
+			}
+			else didResetSolved = false;
 			
 			// DEBUG printing
 			for (boolean[] ba : combinations) {
@@ -329,7 +341,15 @@ public class Solver {
 				minPoint = p;
 			}
 		}
-		if (minPoint == null) throw new IllegalStateException("No point found to click");
+		if (minPoint == null) {
+			if (didResetSolved) throw new IllegalStateException("No square left to click");
+			else {
+				didResetSolved = true;
+				solved = new boolean[width][height];
+				return;
+			}
+		}
+		else didResetSolved = false;
 		click(minPoint, "ProbabilitySolver");
 	}
 	

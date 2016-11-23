@@ -30,12 +30,15 @@ public class WindowsMinesweeper implements Minesweeper {
 	private int squareWidth, halfSquareWidth;
 	private Point topLeft, bottomRight;
 	private Rectangle windowLocation;
+	private boolean gameOver;
 	
 	public static void main(String[] args) throws InterruptedException {
 		WindowsMinesweeper ms = new WindowsMinesweeper();
 		System.out.println("Taking screenshot in 3 seconds...");
 		Thread.sleep(3000);
 		if (!ms.detect()) return;
+		
+		Thread.sleep(500);
 		
 		Solver solver = new Solver();
 		solver.solve(ms);
@@ -143,6 +146,7 @@ public class WindowsMinesweeper implements Minesweeper {
 		squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
 		halfSquareWidth = squareWidth / 2;
 		boardDetected = true;
+		gameOver = false;
 
 //		System.out.println(squareWidth + ", " + halfSquareWidth);
 //		int x = topLeft.x + squareWidth + halfSquareWidth;
@@ -195,23 +199,7 @@ public class WindowsMinesweeper implements Minesweeper {
 
 	public boolean isGameOver() {
 		if (!boardDetected) throw new IllegalStateException("No detected board");
-		
-		BufferedImage img = takeScreenshot();
-		int midX = img.getWidth() / 2;
-		int midY = img.getHeight() / 2;
-		
-		int count = 0;
-		for (int x = midX - 30; x < midX + 30; x++) {
-			for (int y = midY - 30; y < midY + 30; y++) {
-				int rgb = img.getRGB(x, y);
-				int red = (rgb >> 16) & 0xFF;
-				int green = (rgb >> 8) & 0xFF;
-				int blue = rgb & 0xFF;
-				if (colorDifference(red, green, blue, 240, 240, 240) < 12) count++;
-			}
-		}
-		
-		return count > 1800;
+		return gameOver;
 	}
 
 	public int[][] getBoard() {
@@ -219,6 +207,26 @@ public class WindowsMinesweeper implements Minesweeper {
 
 		moveMouse(-1, -1);
 		BufferedImage img = takeScreenshot();
+		
+		int midX = img.getWidth() / 2;
+		int midY = img.getHeight() / 2;
+		
+		// Try to detect game over dialog box
+		int countWhite = 0;
+		for (int x = midX - 20; x < midX + 20; x++) {
+			for (int y = midY - 20; y < midY + 20; y++) {
+				int rgb = img.getRGB(x, y);
+				int red = (rgb >> 16) & 0xFF;
+				int green = (rgb >> 8) & 0xFF;
+				int blue = rgb & 0xFF;
+				if (colorDifference(red, green, blue, 240, 240, 240) < 12) countWhite++;
+			}
+		}
+		if (countWhite > 1100) {
+			gameOver = true;
+			return null;
+		}
+		
 		int[][] board = new int[width][height];
 		
 		for (int x = 0; x < width; x++) {
@@ -280,8 +288,10 @@ public class WindowsMinesweeper implements Minesweeper {
 			int blue = rgb & 0xFF;
 
 			// Detect death
-			if(colorDifference(red, green, blue, 110,110,110) < 20)
+			if(colorDifference(red, green, blue, 110,110,110) < 20) {
+				gameOver = true;
 				return -10;
+			}
 
 			// Detect flagging of any sort
 			if(colorDifference(red,green,blue,255,0,0) < 30)
