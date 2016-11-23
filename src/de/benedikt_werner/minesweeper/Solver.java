@@ -64,7 +64,7 @@ public class Solver {
 		bombProbability = new HashMap<>();
 		
 		if (board == null) {
-			System.out.println("No board found!");
+			System.out.println("Failed to find board!");
 			noBoardCounter++;
 			try {
 				Thread.sleep(100);
