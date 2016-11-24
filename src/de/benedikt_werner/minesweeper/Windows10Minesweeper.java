@@ -6,9 +6,9 @@ import java.awt.image.BufferedImage;
 public class Windows10Minesweeper extends WindowsMinesweeper {
 	
 	private static final int CORNER_DETECTION_JUMP = 10;
-	protected static final int IMAGE_OFFSET_X = 150, IMAGE_OFFSET_Y = 450;
+	protected static final int IMAGE_OFFSET_X = 150, IMAGE_OFFSET_Y = 200;
 	public int getImageOffsetX() {return IMAGE_OFFSET_X;}
-	public int getImageOffsetY() {return IMAGE_OFFSET_X;}
+	public int getImageOffsetY() {return IMAGE_OFFSET_Y;}
 
 	public static void main(String[] args) throws InterruptedException{
 		WindowsMinesweeper ms = new Windows10Minesweeper();
@@ -21,7 +21,6 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
 		System.out.print("1..");
 		Thread.sleep(1000);
 		if (!ms.detect()) return;
-		ms.getBoard();
 		
 		Thread.sleep(500);
 		

@@ -110,7 +110,7 @@ public abstract class WindowsMinesweeper implements Minesweeper {
 	protected BufferedImage takeScreenshot(){
 		if (windowLocation == null) return null;
 		BufferedImage img = robot.createScreenCapture(windowLocation);
-		return img.getSubimage(getImageOffsetX(), getImageOffsetY(), img.getWidth() - 2 * getImageOffsetX(), img.getHeight() - getImageOffsetX() - getImageOffsetX());
+		return img.getSubimage(getImageOffsetX(), getImageOffsetY(), img.getWidth() - 2 * getImageOffsetX(), img.getHeight() - getImageOffsetX() - getImageOffsetY());
 	}
 
 	private interface User32 extends StdCallLibrary {

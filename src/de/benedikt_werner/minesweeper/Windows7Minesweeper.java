@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage;
 public class Windows7Minesweeper extends WindowsMinesweeper {
 	protected static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
 	public int getImageOffsetX() {return IMAGE_OFFSET_X;}
-	public int getImageOffsetY() {return IMAGE_OFFSET_X;}
+	public int getImageOffsetY() {return IMAGE_OFFSET_Y;}
 	
 	protected void moveMouse(int x, int y) {
 		robot.mouseMove(
