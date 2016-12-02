@@ -3,6 +3,8 @@ package de.benedikt_werner.minesweeper;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 
+import javax.swing.JFrame;
+
 public class Windows7Minesweeper extends WindowsMinesweeper {
 	protected static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
 	public int getImageOffsetX() {return IMAGE_OFFSET_X;}
@@ -77,6 +79,12 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
 		System.out.printf("(%d|%d)\n", bottomRight.x, bottomRight.y);
 		//saveImage(img);
 		//saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
+
+        JFrame[] corners =  new JFrame[4];
+        corners[0] = createCornerFrame(topLeft);
+        corners[1] = createCornerFrame(bottomRight);
+        corners[2] = createCornerFrame(new Point(topLeft.x, bottomRight.y));
+        corners[3] = createCornerFrame(new Point(bottomRight.x, topLeft.y));
 		
 		//Find width and height
 		Point innerCorner = null;
@@ -120,6 +128,7 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
 		
 		// Ask for number of bombs
 		totalBombs = readInt("Bombs: ");
+        for (JFrame frame : corners) frame.dispose();
 		if (totalBombs == -1) return false;
 
 		// Calculate values

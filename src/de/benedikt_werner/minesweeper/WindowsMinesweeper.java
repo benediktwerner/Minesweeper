@@ -1,6 +1,7 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.AWTException;
+import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Robot;
@@ -10,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 import com.sun.jna.Native;
@@ -161,6 +163,17 @@ public abstract class WindowsMinesweeper implements Minesweeper {
 		int blue = i & 0xFF;
 		return (red < 30 && green < 30 && blue < 35);
 	}
+
+    protected JFrame createCornerFrame(Point point) {
+        JFrame frame = new JFrame();
+        frame.getContentPane().setBackground(Color.RED);
+        frame.setAlwaysOnTop(true);
+        frame.setBounds(windowLocation.x + getImageOffsetX() + point.x - 10, windowLocation.y + getImageOffsetY() + point.y - 10, 20, 20);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setUndecorated(true);
+        frame.setVisible(true);
+        return frame;
+    }
 	
 	public static void saveImage(BufferedImage img) {
 		File file = new File("C:\\Users\\Bene\\Downloads\\Image-"+System.currentTimeMillis()+".png");
