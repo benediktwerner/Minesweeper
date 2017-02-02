@@ -17,7 +17,6 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 public class GUI {
-	
 	public static final int BUTTON_SIZE = 50;
 	public static final int BUTTON_OFFSET = 20;
 

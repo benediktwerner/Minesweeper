@@ -176,7 +176,7 @@ public abstract class WindowsMinesweeper implements Minesweeper {
     }
 	
 	public static void saveImage(BufferedImage img) {
-		File file = new File("C:\\Users\\Bene\\Downloads\\Image-"+System.currentTimeMillis()+".png");
+		File file = new File(System.getProperty("user.home") + "\\Downloads\\Minesweeper-"+System.currentTimeMillis()+".png");
 		try {
 			ImageIO.write(img, "png", file);
 			System.out.println("Saved image");

@@ -4,6 +4,9 @@ import java.awt.Point;
 import java.util.LinkedList;
 import java.util.Random;
 
+/*
+ * Simple Minesweeper implementation
+ */
 public class Game implements Minesweeper {
 	private int[][] board;
 	private int[][] visibleBoard;

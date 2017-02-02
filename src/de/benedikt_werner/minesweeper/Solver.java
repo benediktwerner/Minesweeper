@@ -8,6 +8,7 @@ import java.util.LinkedList;
 
 public class Solver {
 	
+    // If bombs < LIMIT the solver will also check non-border squares
 	private static final int COMPLETE_SOLVER_LIMIT = 15;
 
 	private boolean[][] flags;
