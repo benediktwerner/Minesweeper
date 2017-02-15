@@ -147,7 +147,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         totalBombs = readInt("Bombs: ");
         for (JFrame frame : corners) frame.dispose();
         if (totalBombs == -1) return false;
-        
+
 
         // Calculate values
         squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
