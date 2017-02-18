@@ -26,7 +26,7 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         WindowsMinesweeper ms = new Windows7Minesweeper();
         System.out.println("Taking screenshot in 3 seconds...");
         Thread.sleep(3000);
-        if (!ms.detect()) return;
+        if (!ms.findBoardAndCallibrate()) return;
 
         Thread.sleep(500);
 
@@ -34,9 +34,9 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         solver.solve(ms);
     }
 
-    public boolean detect() {
+    public boolean findBoardAndCallibrate() {
         // Find window
-        windowLocation = getWindowLocation("Minesweeper");
+        windowLocation = Util.getWindowLocation("Minesweeper");
         if (windowLocation == null) {
             System.out.println("No Minesweper window found!");
             return false;
@@ -47,7 +47,7 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         BufferedImage img = takeScreenshot();
         for (int y = 0; y < img.getHeight(); y++) {
             for (int x = 0; x < img.getWidth(); x++) {
-                if (isBlack(img.getRGB(x, y))) {
+                if (Util.isBlack(img.getRGB(x, y))) {
                     topLeft = new Point(x, y);
                     foundCorner = true;
                     break;
@@ -61,13 +61,13 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         //Find bottom right corner
         int rightX = -1, bottomY = -1;
         for (int x = topLeft.x; x < img.getWidth(); x++) {
-            if (!isBlack(img.getRGB(x, topLeft.y))) {
+            if (!Util.isBlack(img.getRGB(x, topLeft.y))) {
                 rightX = x - 1;
                 break;
             }
         }
         for (int y = topLeft.y; y < img.getHeight(); y++) {
-            if (!isBlack(img.getRGB(topLeft.x, y))) {
+            if (!Util.isBlack(img.getRGB(topLeft.x, y))) {
                 bottomY = y - 1;
                 break;
             }
@@ -89,7 +89,7 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         //Find width and height
         Point innerCorner = null;
         for (int i = 1; i < 10; i++)
-            if (!isBlack(img.getRGB(topLeft.x + i, topLeft.y + i)))
+            if (!Util.isBlack(img.getRGB(topLeft.x + i, topLeft.y + i)))
                 innerCorner = new Point(topLeft.x + i, topLeft.y + i);
 
         // Auto detection failed
@@ -97,22 +97,22 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
             width = 0;
             boolean onSquare = true;
             for (int x = innerCorner.x; x <= bottomRight.x; x++) {
-                if (onSquare && isBlack(img.getRGB(x, innerCorner.y))) {
+                if (onSquare && Util.isBlack(img.getRGB(x, innerCorner.y))) {
                     onSquare = false;
                     width++;
                 }
-                else if (!onSquare && !isBlack(img.getRGB(x, innerCorner.y))) {
+                else if (!onSquare && !Util.isBlack(img.getRGB(x, innerCorner.y))) {
                     onSquare = true;
                 }
             }
             height = 0;
             onSquare = true;
             for (int y = innerCorner.y; y <= bottomRight.y; y++) {
-                if (onSquare && isBlack(img.getRGB(innerCorner.x, y))) {
+                if (onSquare && Util.isBlack(img.getRGB(innerCorner.x, y))) {
                     onSquare = false;
                     height++;
                 }
-                else if (!onSquare && !isBlack(img.getRGB(innerCorner.x, y))) {
+                else if (!onSquare && !Util.isBlack(img.getRGB(innerCorner.x, y))) {
                     onSquare = true;
                 }
             }

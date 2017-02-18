@@ -1,5 +1,6 @@
 package de.benedikt_werner.minesweeper;
 
+import java.awt.EventQueue;
 import java.awt.Point;
 import java.util.LinkedList;
 import java.util.Random;
@@ -7,15 +8,23 @@ import java.util.Random;
 /*
  * Simple Minesweeper implementation
  */
-public class Game implements Minesweeper {
+public class SimpleMinesweeper implements Minesweeper {
     private int[][] board;
     private int[][] visibleBoard;
-    private boolean gameOver;
     private int openSquares;
     private int squaresToOpen;
-
-    private boolean generated;
     private int width, height, bombs;
+    private boolean gameOver, generated;
+
+    public static void main(String[] args) {
+        SimpleMinesweeper game = new SimpleMinesweeper();
+        EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                GUI gui = new GUI(game);
+                gui.show();
+            }
+        });
+    }
 
     public void setup(int width, int height, int bombs) {
         this.width = width;
@@ -25,45 +34,47 @@ public class Game implements Minesweeper {
         gameOver = false;
 
         visibleBoard = new int[height][width];
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                visibleBoard[x][y] = -2;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                visibleBoard[y][x] = -2;
             }
         }
     }
 
     private void generate(Point start) {
-        if (bombs + 9 > width*height) {
+        if (bombs + 1 > width*height) {
             throw new IllegalArgumentException("Too many bombs: " + bombs + " bombs on " + (width*height) + " squares.");
         }
+        
         board = new int[height][width];
-
-        LinkedList<Point> possibleBombs = new LinkedList<Point>();
-        for (int x = 0; x < height; x++) {
-            for (int y = 0; y < width; y++) {
-                if (x >= start.x - 1 && x <= start.x + 1 &&
-                        y >= start.y - 1 && y <= start.y + 1) {
-                    continue;
-                }
-                possibleBombs.add(new Point(x, y));
-            }
-        }
+        LinkedList<Point> possibleBombs = generatePossibleBombs(start);
 
         Random random = new  Random();
-        for (int i = 0; i < bombs; i++) {
+        for (int i = 0; i < bombs; i++)
             placeBomb(possibleBombs.remove(random.nextInt(possibleBombs.size())));
-        }
 
         openSquares = 0;
         squaresToOpen = width * height - bombs;
+        generated = true;
+    }
+    
+    private LinkedList<Point> generatePossibleBombs(Point start) {
+        LinkedList<Point> possibleBombs = new LinkedList<Point>();
+        for (int x = 0; x < height; x++) {
+            for (int y = 0; y < width; y++) {
+                if (x == start.x && y == start.y)
+                    continue;
+                possibleBombs.add(new Point(x, y));
+            }
+        }
+        return possibleBombs;
     }
 
     public void click(int x, int y) {
-        if (!generated) {
+        if (!generated)
             generate(new Point(x, y));
-            generated = true;
-        }
-        if (visibleBoard[x][y] != -2) return;
+        
+        if (visibleBoard[x][y] != -2) return; // Square is already open
         else if (board[x][y] == -1) gameOver();
         else if (board[x][y] == 0) floodOpen(x, y);
         else {
@@ -73,9 +84,11 @@ public class Game implements Minesweeper {
         }
     }
 
-    public void flag(int x, int y, boolean flag) {
-        if (visibleBoard[x][y] == -1 || visibleBoard[x][y] == -2)
-            visibleBoard[x][y] = flag ? -1 : -2;
+    public void flag(int x, int y) {
+        switch (visibleBoard[x][y]) {
+            case -1: visibleBoard[x][y] = -2; break;
+            case -2: visibleBoard[x][y] = -1; break;
+        }
     }
 
     public void chord(int x, int y) {
@@ -87,18 +100,17 @@ public class Game implements Minesweeper {
             // Get information about surrounding squares
             for (int i = (x > 0 ? x - 1 : 0); i < maxX; i++)
                 for (int j = (y > 0 ? y - 1 : 0); j < maxY; j++)
-                    if (visibleBoard[i][j] == -1) bombsAround++;
+                    if (visibleBoard[i][j] == -1)
+                        bombsAround++;
+            
+            // Open squares if all bombs were found
             if (bombsAround == visibleBoard[x][y]) {
                 for (int i = (x > 0 ? x - 1 : 0); i < maxX; i++)
                     for (int j = (y > 0 ? y - 1 : 0); j < maxY; j++)
-                        if (visibleBoard[i][j] == -2) click(i,j);
+                        if (visibleBoard[i][j] == -2)
+                            click(i,j);
             }
         }
-    }
-
-    public void switchFlag(int x, int y) {
-        if (visibleBoard[x][y] == -1) visibleBoard[x][y] = -2;
-        else if (visibleBoard[x][y] == -2) visibleBoard[x][y] = -1;
     }
 
     private void gameOver() {
@@ -118,9 +130,9 @@ public class Game implements Minesweeper {
             Point p = stack.removeFirst();
             if (p.x < 0 || p.x >= width ||
                     p.y < 0 || p.y >= height ||
-                    visibleBoard[p.x][p.y] != -2) {
+                    visibleBoard[p.x][p.y] != -2)
                 continue;
-            }
+
             visibleBoard[p.x][p.y] = board[p.x][p.y];
             openSquares++;
             if (board[p.x][p.y] == 0) {
@@ -141,9 +153,8 @@ public class Game implements Minesweeper {
                 if ((x == position.x && y == position.y) ||
                         x < 0 || x >= board.length ||
                         y < 0 || y >= board[x].length ||
-                        board[x][y] == -1) {
+                        board[x][y] == -1)
                     continue;
-                }
                 board[x][y]++;
             }
         }

@@ -1,13 +1,12 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.Color;
-import java.awt.EventQueue;
+import java.awt.Container;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.util.HashMap;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -20,29 +19,13 @@ public class GUI {
     public static final int BUTTON_SIZE = 50;
     public static final int BUTTON_OFFSET = 20;
 
-    private Game game;
+    private SimpleMinesweeper game;
     private JFrame frame;
     private JButton btnNewGame;
     private JLabel lblBombCount;
     private JButton[][] buttons = new JButton[0][0];
 
-    private HashMap<JButton, Point> buttonMap;
-
-    public static void main(String[] args) {
-        Game game = new Game();
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    GUI gui = new GUI(game);
-                    gui.frame.setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-    public GUI(Game game) {
+    public GUI(SimpleMinesweeper game) {
         this.game = game;
 
         try {
@@ -93,19 +76,23 @@ public class GUI {
             JOptionPane.showMessageDialog(frame, "Invalid value!");
             return;
         }
-
-        btnNewGame.setVisible(false);
         game.setup(width, height, bombs);
-
+        btnNewGame.setVisible(false);
+        lblBombCount.setVisible(true);
+        generateButtons(width, height);
+        redrawGame();
+    }
+    
+    private void generateButtons(int width, int height) {
+        Container contentPane = frame.getContentPane();
         buttons = new JButton[height][width];
-        buttonMap = new HashMap<>();
 
         for (int x = 0; x < height; x++) {
             for (int y = 0; y < width; y++) {
-                buttons[x][y] = new JButton();
-                buttons[x][y].setBounds(y*BUTTON_SIZE, x*BUTTON_SIZE + BUTTON_OFFSET, BUTTON_SIZE, BUTTON_SIZE);
-                buttonMap.put(buttons[x][y], new Point(x, y));
-                buttons[x][y].addMouseListener(new MouseListener() {
+                final Point buttonPosition = new Point(x, y);
+                JButton newButton = new JButton();
+                newButton.setBounds(y*BUTTON_SIZE, x*BUTTON_SIZE + BUTTON_OFFSET, BUTTON_SIZE, BUTTON_SIZE);
+                newButton.addMouseListener(new MouseListener() {
                     @Override
                     public void mouseReleased(MouseEvent arg0) {}
                     @Override
@@ -116,35 +103,34 @@ public class GUI {
                     public void mouseEntered(MouseEvent arg0) {}
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        Point p = buttonMap.get((JButton) e.getSource());
                         if (e.getButton() == MouseEvent.BUTTON1) {
-                            game.click(p);
+                            game.click(buttonPosition);
                             if (game.isGameOver()) {
                                 if (game.isWon()) gameFinished("You won!");
                                 else gameFinished("GAME OVER!");
                                 return;
                             }
-                        } else {
-                            game.switchFlag(p.x, p.y);
                         }
+                        else
+                            game.flag(buttonPosition.x, buttonPosition.y);
                         redrawGame();
                     }
                 });
-                frame.getContentPane().add(buttons[x][y]);
+                contentPane.add(newButton);
+                buttons[x][y] = newButton;
             }
         }
-        lblBombCount.setVisible(true);
-        redrawGame();
     }
 
     private void gameFinished(String text) {
         redrawGame();
         JOptionPane.showMessageDialog(frame, text);
 
+        Container contentPane = frame.getContentPane();
         for (int x = 0; x < buttons.length; x++) {
             for (int y = 0; y < buttons[x].length; y++) {
                 buttons[x][y].setVisible(false);
-                frame.getContentPane().remove(buttons[x][y]);
+                contentPane.remove(buttons[x][y]);
             }
         }
 
@@ -183,5 +169,9 @@ public class GUI {
             }
         }
         lblBombCount.setText(game.getTotalBombCount() - flagCount + "");
+    }
+
+    public void show() {
+        frame.setVisible(true);
     }
 }

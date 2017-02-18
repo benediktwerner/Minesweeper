@@ -1,31 +1,20 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.AWTException;
-import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-
-import com.sun.jna.Native;
-import com.sun.jna.platform.win32.WinDef.HWND;
-import com.sun.jna.win32.StdCallLibrary;
-import com.sun.jna.win32.W32APIOptions;
 
 public abstract class WindowsMinesweeper implements Minesweeper {
+    private static final int DELAY_BETWEEN_CLICKS = 10;
+    private static final int DELAY_AFTER_CLICKS = 25;
+    private static final int DELAY_AFTER_MOUSE_MOVE = 10;
+    
+    protected final int IMAGE_OFFSET_X = 0, IMAGE_OFFSET_Y = 0;
 
-    protected static final int DELAY_BETWEEN_CLICKS = 10;
-    protected static final int DELAY_AFTER_CLICKS = 25;
-    protected static final int DELAY_AFTER_MOUSE_MOVE = 10;
-
-    protected Robot robot;
+    private Robot robot;
     protected boolean boardDetected = false;
     protected int width = 0, height = 0, totalBombs = 0;
     protected int squareWidth, halfSquareWidth;
@@ -41,16 +30,30 @@ public abstract class WindowsMinesweeper implements Minesweeper {
         }
     }
 
-    public abstract boolean detect();
-    public abstract int[][] getBoard();
-    public abstract int getImageOffsetX();
-    public abstract int getImageOffsetY();
+    public abstract Point boardToScreen(int x, int y);
+
+    public void click(int x, int y) {
+        checkBoardDetected();
+        moveMouse(x, y);
+        clickMouse(InputEvent.BUTTON1_DOWN_MASK);
+    }
+
+    public void flag(int x, int y) {
+        checkBoardDetected();
+        moveMouse(x, y);
+        clickMouse(InputEvent.BUTTON3_DOWN_MASK);
+    }
+
+    public void chord(int x, int y) {
+        checkBoardDetected();
+        moveMouse(x, y);
+        clickMouse(InputEvent.BUTTON3_DOWN_MASK | InputEvent.BUTTON1_DOWN_MASK);
+    }
 
     protected void moveMouse(int x, int y) {
-        robot.mouseMove(
-                windowLocation.x + getImageOffsetX() + topLeft.x + (x * squareWidth) + halfSquareWidth,
-                windowLocation.y + getImageOffsetY() + topLeft.y + (y * squareWidth) + halfSquareWidth
-                );
+        checkBoardDetected();
+        final Point screenPoint = boardToScreen(x, y);
+        robot.mouseMove(screenPoint.x, screenPoint.y);;
         try {
             Thread.sleep(DELAY_AFTER_MOUSE_MOVE);
         } catch (InterruptedException e) {
@@ -58,42 +61,12 @@ public abstract class WindowsMinesweeper implements Minesweeper {
         }
     }
 
-    public void click(int x, int y) {
-        if (!boardDetected) throw new IllegalStateException("No detected board");
+    private void clickMouse(int buttons) {
         try {
-            moveMouse(x, y);
-            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            robot.mousePress(buttons);
             Thread.sleep(DELAY_BETWEEN_CLICKS);
-            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-            Thread.sleep(DELAY_AFTER_CLICKS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * @param flag is not supported by WindowsMinesweeper. This function just cycles through the possible flag states
-     */
-    public void flag(int x, int y, boolean flag) {
-        if (!boardDetected) throw new IllegalStateException("No detected board");
-        try {
-            moveMouse(x, y);
-            robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-            Thread.sleep(DELAY_BETWEEN_CLICKS);
-            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-            Thread.sleep(DELAY_AFTER_CLICKS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void chord(int x, int y) {
-        if (!boardDetected) throw new IllegalStateException("No detected board");
-        try {
-            moveMouse(x, y);
-            robot.mousePress(InputEvent.BUTTON3_DOWN_MASK | InputEvent.BUTTON1_DOWN_MASK);
-            Thread.sleep(DELAY_BETWEEN_CLICKS);
-            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK | InputEvent.BUTTON1_DOWN_MASK);
+            
+            robot.mouseRelease(buttons);
             Thread.sleep(DELAY_AFTER_CLICKS);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -101,38 +74,21 @@ public abstract class WindowsMinesweeper implements Minesweeper {
     }
 
     public boolean isGameOver() {
-        if (!boardDetected) throw new IllegalStateException("No detected board");
+        checkBoardDetected();
         return gameOver;
     }
 
-    protected int colorDifference(int r1, int g1, int b1, int r2, int g2, int b2){
-        return Math.abs(r1 - r2) + Math.abs(b1 - b2) + Math.abs(g1 - g2);
-    }
-
-    protected BufferedImage takeScreenshot(){
-        if (windowLocation == null) return null;
+    // FIXME: add variable for relevant are to take, use that instead of windowLocation
+    protected BufferedImage takeScreenshot() {
+        if (windowLocation == null)
+            return null;
         BufferedImage img = robot.createScreenCapture(windowLocation);
-        return img.getSubimage(getImageOffsetX(), getImageOffsetY(), img.getWidth() - 2 * getImageOffsetX(), img.getHeight() - getImageOffsetX() - getImageOffsetY());
+        return img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
     }
-
-    private interface User32 extends StdCallLibrary {
-        User32 INSTANCE = (User32) Native.loadLibrary("user32", User32.class,
-                W32APIOptions.DEFAULT_OPTIONS);
-
-        HWND FindWindow(String lpClassName, String lpWindowName);
-
-        int GetWindowRect(HWND handle, int[] rect);
-    }
-
-    protected static Rectangle getWindowLocation(String windowName) {
-        HWND hwnd = User32.INSTANCE.FindWindow(null, windowName);
-        if (hwnd == null) return null;
-
-        int[] rect = {0, 0, 0, 0};
-        int result = User32.INSTANCE.GetWindowRect(hwnd, rect);
-        if (result == 0) return null;
-
-        return new Rectangle(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+    
+    protected void checkBoardDetected() {
+        if (!boardDetected)
+            throw new IllegalStateException("No detected board");
     }
 
     public int getWidth() {
@@ -145,43 +101,5 @@ public abstract class WindowsMinesweeper implements Minesweeper {
 
     public int getTotalBombCount() {
         return totalBombs;
-    }
-
-    protected int readInt(String text) {
-        while (true) {
-            String s = JOptionPane.showInputDialog(null, text);
-            if (s == null) return -1;
-            try {
-                return Integer.parseInt(s.trim());
-            } catch (NumberFormatException e) {}
-        }
-    }
-
-    protected boolean isBlack(int i) {
-        int red = (i >> 16) & 0xFF;
-        int green = (i >> 8) & 0xFF;
-        int blue = i & 0xFF;
-        return (red < 30 && green < 30 && blue < 35);
-    }
-
-    protected JFrame createCornerFrame(Point point) {
-        JFrame frame = new JFrame();
-        frame.getContentPane().setBackground(Color.RED);
-        frame.setAlwaysOnTop(true);
-        frame.setBounds(windowLocation.x + getImageOffsetX() + point.x - 10, windowLocation.y + getImageOffsetY() + point.y - 10, 20, 20);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setUndecorated(true);
-        frame.setVisible(true);
-        return frame;
-    }
-
-    public static void saveImage(BufferedImage img) {
-        File file = new File(System.getProperty("user.home") + "\\Downloads\\Minesweeper-"+System.currentTimeMillis()+".png");
-        try {
-            ImageIO.write(img, "png", file);
-            System.out.println("Saved image");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }

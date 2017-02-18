@@ -23,8 +23,8 @@ public class Solver {
     private Minesweeper ms;
     private int width, height, bombsLeft, noBoardCounter;
     private boolean changeMade, recurseComplete, didResetSolved;
-
-    public void solve(Minesweeper minesweeper) {
+    
+    public Solver(Minesweeper minesweeper) {
         ms = minesweeper;
         width = ms.getWidth();
         height = ms.getHeight();
@@ -34,20 +34,20 @@ public class Solver {
         bombsAround = new int[width][height];
         noBoardCounter = 0;
         didResetSolved = false;
+    }
 
-        // Start solving
+    public void solve() {
         click(new Point(width / 2, height / 2), "Startup");
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        while (!ms.isGameOver() && noBoardCounter < 10) {
+        while (!ms.isGameOver() && noBoardCounter < 10)
             nextMove();
-        }
 
-        // Finished
-        if (noBoardCounter >= 10) System.out.println("Aborted solving: Unable to detect board");
+        if (noBoardCounter >= 10) 
+            System.out.println("Aborted solving: Unable to detect board");
         else System.out.println("Game ended!");
     }
 
@@ -305,7 +305,7 @@ public class Solver {
     }
 
     private void click(Point p, String tag) {
-        System.out.println(String.format("[" + tag + "]: Clicking %d|%d", p.x, p.y));
+        System.out.printf("[%s]: Clicking %d|%d\n", tag, p.x, p.y);
         changeMade = true;
         ms.click(p);
     }
@@ -313,7 +313,7 @@ public class Solver {
     private void flag(Point p, String tag) {
         if (flags[p.x][p.y]) return;
         System.out.println(String.format("[" + tag + "]: Flagging %d|%d", p.x, p.y));
-        ms.flag(p, true);
+        ms.flag(p);
         changeMade = true;
         flags[p.x][p.y] = true;
         solved[p.x][p.y] = true;
