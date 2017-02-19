@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 
 public class Windows10Minesweeper extends WindowsMinesweeper {
-    protected final int IMAGE_OFFSET_X = 150, IMAGE_OFFSET_Y = 200;
+    private static final int IMAGE_OFFSET_X = 120, IMAGE_OFFSET_Y = 200;
 
     private static final Color BOMB_COLOR = new Color(0, 20, 60);
     private static final Color FLAG_COLOR = new Color(250, 205, 60);
@@ -18,12 +18,10 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
     private static final Color FOUR_COLOR = new Color(30, 87, 192);
     private static final Color FIVE_COLOR = new Color(187, 41, 41);
 
-    private JFrame[] cornerFrames;
-
     public static void main(String[] args) throws InterruptedException {
         Windows10Minesweeper ms = new Windows10Minesweeper();
         System.out.print("Taking screenshot in 3 seconds...");
-        Thread.sleep(300);
+        Util.sleep(300);
         Util.printCountdown(3);
 
         System.out.println("Done.\n"
@@ -32,9 +30,10 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             ms.findBoardAndCallibrate();
         } catch (IllegalStateException e) {
             System.out.println("Failed to find board: " + e.getMessage());
+            return;
         }
 
-        Thread.sleep(500);
+        Util.sleep(500);
         new Solver(ms).solve();
     }
 
@@ -44,18 +43,23 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             throw new IllegalStateException("No Minesweper window found!");
 
         BufferedImage img = takeScreenshot();
+        img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
 
         findTopLeftCorner(img);
         System.out.printf("Found top left corner: (%d|%d)\n", topLeft.x, topLeft.y);
 
         findBottomRightCorner(img);
         System.out.printf("Found bottom right corner: (%d|%d)\n", bottomRight.x, bottomRight.y);
-
+        
+        windowLocation.x += IMAGE_OFFSET_X + topLeft.x;
+        windowLocation.y += IMAGE_OFFSET_Y + topLeft.y;
+        windowLocation.width = bottomRight.x - topLeft.x;
+        windowLocation.height = bottomRight.y - topLeft.y;
         showCornerFrames();
         
         // DEBUG STUFF
-        Util.saveImage(img);
-        Util.saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
+        //Util.saveImage(img);
+        //Util.saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
 
         findWidthAndHeight(img);
         totalBombs = Util.readInt("Bombs: ");
@@ -100,11 +104,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
     }
 
     private void showCornerFrames() {
-        cornerFrames =  new JFrame[4];
-        cornerFrames[0] = Util.createCornerFrame(offsetToBoard(topLeft));
-        cornerFrames[1] = Util.createCornerFrame(offsetToBoard(bottomRight));
-        cornerFrames[2] = Util.createCornerFrame(offsetToBoard(new Point(topLeft.x, bottomRight.y)));
-        cornerFrames[3] = Util.createCornerFrame(offsetToBoard(new Point(bottomRight.x, topLeft.y)));
+        cornerFrames = Util.createCornerFrames(windowLocation);
     }
 
     private void hideCornerFrames() {
@@ -200,8 +200,8 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
      * @return -10: bomb, -2: unknown, -1: flag, 0: empty, 1+: number
      */
     private int detectNumber(BufferedImage img, int x, int y){
-        int imgX = topLeft.x + x * squareWidth + halfSquareWidth;
-        int imgY = topLeft.y + y * squareWidth + halfSquareWidth;
+        int imgX = (x * squareWidth) + halfSquareWidth;
+        int imgY = (y * squareWidth) + halfSquareWidth;
 
         boolean hasColorOfOne = false;
         boolean hasColorOfFive = false;
@@ -243,16 +243,10 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         return (red < 60 && green < 65 && blue < 70);
     }
 
-    public Point offsetToBoard(Point point) {
-        return new Point(
-                point.x + windowLocation.x + IMAGE_OFFSET_X,
-                point.y + windowLocation.y + IMAGE_OFFSET_Y);
-    }
-
     @Override
     public Point boardToScreen(int x, int y) {
         return new Point(
-                windowLocation.x + IMAGE_OFFSET_X + topLeft.x + (x * squareWidth) + halfSquareWidth,
-                windowLocation.y + IMAGE_OFFSET_Y + topLeft.y + (y * squareWidth) + halfSquareWidth);
+                windowLocation.x + (x * squareWidth) + halfSquareWidth,
+                windowLocation.y + (y * squareWidth) + halfSquareWidth);
     }
 }

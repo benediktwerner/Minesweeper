@@ -7,12 +7,12 @@ import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 
+import javax.swing.JFrame;
+
 public abstract class WindowsMinesweeper implements Minesweeper {
     private static final int DELAY_BETWEEN_CLICKS = 10;
     private static final int DELAY_AFTER_CLICKS = 25;
     private static final int DELAY_AFTER_MOUSE_MOVE = 10;
-    
-    protected final int IMAGE_OFFSET_X = 0, IMAGE_OFFSET_Y = 0;
 
     private Robot robot;
     protected boolean boardDetected = false;
@@ -21,6 +21,8 @@ public abstract class WindowsMinesweeper implements Minesweeper {
     protected Point topLeft, bottomRight;
     protected Rectangle windowLocation;
     protected boolean gameOver;
+
+    protected JFrame[] cornerFrames;
 
     public WindowsMinesweeper() {
         try {
@@ -54,23 +56,15 @@ public abstract class WindowsMinesweeper implements Minesweeper {
         checkBoardDetected();
         final Point screenPoint = boardToScreen(x, y);
         robot.mouseMove(screenPoint.x, screenPoint.y);;
-        try {
-            Thread.sleep(DELAY_AFTER_MOUSE_MOVE);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        Util.sleep(DELAY_AFTER_MOUSE_MOVE);
     }
 
     private void clickMouse(int buttons) {
-        try {
-            robot.mousePress(buttons);
-            Thread.sleep(DELAY_BETWEEN_CLICKS);
-            
-            robot.mouseRelease(buttons);
-            Thread.sleep(DELAY_AFTER_CLICKS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        robot.mousePress(buttons);
+        Util.sleep(DELAY_BETWEEN_CLICKS);
+        
+        robot.mouseRelease(buttons);
+        Util.sleep(DELAY_AFTER_CLICKS);
     }
 
     public boolean isGameOver() {
@@ -78,12 +72,8 @@ public abstract class WindowsMinesweeper implements Minesweeper {
         return gameOver;
     }
 
-    // FIXME: add variable for relevant are to take, use that instead of windowLocation
     protected BufferedImage takeScreenshot() {
-        if (windowLocation == null)
-            return null;
-        BufferedImage img = robot.createScreenCapture(windowLocation);
-        return img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
+        return robot.createScreenCapture(windowLocation);
     }
     
     protected void checkBoardDetected() {

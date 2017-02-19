@@ -1,7 +1,6 @@
 package de.benedikt_werner.minesweeper;
 
 import java.awt.Color;
-import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -102,12 +101,29 @@ public class Util {
             e.printStackTrace();
         }
     }
+    
+    public static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public static JFrame[] createCornerFrames(Rectangle window) {
+        JFrame[] corners = new JFrame[4];
+        corners[0] = createCornerFrame(window.x, window.y);
+        corners[1] = createCornerFrame(window.x + window.width, window.y);
+        corners[2] = createCornerFrame(window.x, window.y + window.height);
+        corners[3] = createCornerFrame(window.x + window.width, window.y + window.height);
+        return corners;
+    }
 
-    public static JFrame createCornerFrame(Point position) {
+    private static JFrame createCornerFrame(int x, int y) {
         JFrame frame = new JFrame();
         frame.getContentPane().setBackground(Color.RED);
         frame.setAlwaysOnTop(true);
-        frame.setBounds(position.x - 10, position.y - 10, 20, 20);
+        frame.setBounds(x - 10, y - 10, 20, 20);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setUndecorated(true);
         frame.setVisible(true);

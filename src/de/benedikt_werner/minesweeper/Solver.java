@@ -23,7 +23,7 @@ public class Solver {
     private Minesweeper ms;
     private int width, height, bombsLeft, noBoardCounter;
     private boolean changeMade, recurseComplete, didResetSolved;
-    
+
     public Solver(Minesweeper minesweeper) {
         ms = minesweeper;
         width = ms.getWidth();
@@ -38,15 +38,11 @@ public class Solver {
 
     public void solve() {
         click(new Point(width / 2, height / 2), "Startup");
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        Util.sleep(100);
         while (!ms.isGameOver() && noBoardCounter < 10)
             nextMove();
 
-        if (noBoardCounter >= 10) 
+        if (noBoardCounter >= 10)
             System.out.println("Aborted solving: Unable to detect board");
         else System.out.println("Game ended!");
     }
@@ -58,19 +54,39 @@ public class Solver {
         unopendSquares = new HashSet<>();
         bombProbability = new HashMap<>();
 
-        if (board == null) {
-            System.out.println("Failed to find board!");
-            noBoardCounter++;
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        if (!boardExists())
             return;
-        }
-        else noBoardCounter = 0;
+        
+        simpleDeduction();
+        if (changeMade)
+            return;
 
-        // Try simple deduction
+        recurseComplete = (unopendSquares.size() < COMPLETE_SOLVER_LIMIT);
+        if (!borderSquares.isEmpty() || recurseComplete) {
+            backtrackSolver();
+            if (!changeMade)
+                clickRandom();
+        }
+        else {
+            System.out.println("No border squares found!");
+            noBoardCounter++;
+            Util.sleep(100);
+        }
+    }
+
+    private boolean boardExists() {
+        if (board == null) {
+            noBoardCounter++;
+            Util.sleep(100);
+            return false;
+        }
+        else {
+            noBoardCounter = 0;
+            return true;
+        }
+    }
+
+    private void simpleDeduction() {
         for (int x = 0; x < board.length; x++) {
             for (int y = 0; y < board[x].length; y++) {
                 if (!solved[x][y]) {
@@ -81,37 +97,6 @@ public class Solver {
                         default: solved[x][y] = checkSquare(x, y);
                     }
                 }
-            }
-        }
-
-        if (changeMade) return;
-
-        // Nothing found! Try backtrack solver
-        recurseComplete = unopendSquares.size() < COMPLETE_SOLVER_LIMIT;
-        if (recurseComplete) System.out.println("Recursing over all tiles left.");
-
-        if (!borderSquares.isEmpty() || recurseComplete) {
-            System.out.println("Simple deduction failed! Starting backtrack solver ...");
-            long startTime = System.nanoTime();
-
-            backtrackSolver();
-
-            long totalTime = System.nanoTime() - startTime;
-            System.out.println("Backtrack solver finished after " + (totalTime / 1000000000.0) + "s");
-
-            if (changeMade) return;
-
-            // Still no change. Click randomly
-            System.out.println("No deduction possible! Clicking square with best probability.");
-            clickRandom();
-        }
-        else {
-            System.out.println("No border squares found!");
-            noBoardCounter++;
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
     }
@@ -145,13 +130,6 @@ public class Solver {
             }
             else didResetSolved = false;
 
-            // DEBUG printing
-            for (boolean[] ba : combinations) {
-                String s = "";
-                for (boolean b : ba) s += b ? "1" : "0";
-                System.out.println(s);
-            }
-
             int[] bombCases = new int[borderList.size()];
             for (boolean[] b : combinations)
                 for (int i = 0; i < b.length; i++)
@@ -172,7 +150,6 @@ public class Solver {
     }
 
     private LinkedList<HashSet<Point>> mergeRegions() {
-        System.out.printf("Merging %d regions...\n", borderSquares.size());
         LinkedList<HashSet<Point>> regions = new LinkedList<>();
 
         while (!borderSquares.isEmpty()) {
@@ -210,20 +187,12 @@ public class Solver {
             }
             regions.add(newRegion);
         }
-        System.out.printf("Finished merging regions. Total number: %d\n", regions.size());
-
         return regions;
     }
 
     private void recurseCombinations(boolean[] borderBombs, int index, int bombs) {
-        //		String s = "";
-        //		for (boolean b : borderBombs) s += b ? "1" : "0";
-        //		System.out.println(s + ": " + index + " " + bombs);
-
-        if (bombs > bombsLeft) {
-            //			System.out.println("Too many bombs");
+        if (bombs > bombsLeft)
             return;
-        }
 
         // Check combination
         int[][] bombsAroundCopy = copy2DInt(bombsAround);
@@ -248,22 +217,20 @@ public class Solver {
             for (int x = (p.x > 0 ? p.x - 1 : 0); x < maxX; x++)
                 for (int y = (p.y > 0 ? p.y - 1 : 0); y < maxY; y++)
                     if (!solved[x][y] && board[x][y] > 0)
-                        if (board[x][y] < bombsAroundCopy[x][y]) {
-                            //							System.out.printf("Too many bombs on %d|%d: %d", x, y, bombsAroundCopy[x][y]);
+                        if (board[x][y] < bombsAroundCopy[x][y])
                             return;
-                        }
-                        else if (board[x][y] != bombsAroundCopy[x][y]) combinationPerfect = false;
+                        else if (board[x][y] != bombsAroundCopy[x][y])
+                            combinationPerfect = false;
         }
 
         if (combinationPerfect) {
-            if (!recurseComplete || bombs == bombsLeft) {
-                //				System.out.println("Found combination!");
+            if (!recurseComplete || bombs == bombsLeft)
                 combinations.add(borderBombs.clone());
-            }
             return;
         }
 
-        if (index == borderBombs.length) return;
+        if (index == borderBombs.length)
+            return;
 
         // Recurse
         borderBombs[index] = true;
@@ -281,20 +248,22 @@ public class Solver {
         // Get information about surrounding squares
         for (int i = (x > 0 ? x - 1 : 0); i < maxX; i++) {
             for (int j = (y > 0 ? y - 1 : 0); j < maxY; j++) {
-                if (flags[i][j]) bombsAround[x][y]++;
-                else if (board[i][j] == -2) unopendSquares.add(new Point(i, j));
+                if (flags[i][j])
+                    bombsAround[x][y]++;
+                else if (board[i][j] == -2)
+                    unopendSquares.add(new Point(i, j));
             }
         }
 
         // Evaluate information
         if (!unopendSquares.isEmpty()) {
-            //System.out.println(String.format("%d|%d = %d - b: %d, uS: %d", x, y, board[x][y], bombsAround[x][y], unopendSquares.size()));
             if (bombsAround[x][y] == board[x][y]) { // Enough bombs marked around
                 solved[x][y] = true;
-                ms.chord(x, y);//for (Point p : unopendSquares) click(p, "SimpleSolver");
+                ms.chord(x, y);
             }
             else if (bombsAround[x][y] + unopendSquares.size() == board[x][y]) // All unknowns around must be bombs
-                for (Point p : unopendSquares) flag(p, "SimpleSolver");
+                for (Point p : unopendSquares)
+                    flag(p, "SimpleSolver");
             else {
                 borderSquares.add(new HashSet<Point>(unopendSquares));
                 return false;
@@ -311,8 +280,9 @@ public class Solver {
     }
 
     private void flag(Point p, String tag) {
-        if (flags[p.x][p.y]) return;
-        System.out.println(String.format("[" + tag + "]: Flagging %d|%d", p.x, p.y));
+        if (flags[p.x][p.y])
+            return;
+        System.out.printf("[%s]: Flagging %d|%d\n", tag, p.x, p.y);
         ms.flag(p);
         changeMade = true;
         flags[p.x][p.y] = true;
@@ -332,7 +302,8 @@ public class Solver {
             }
         }
         if (minPoint == null) {
-            if (didResetSolved) throw new IllegalStateException("No square left to click");
+            if (didResetSolved)
+                throw new IllegalStateException("No square left to click");
             else {
                 didResetSolved = true;
                 solved = new boolean[width][height];
@@ -345,9 +316,8 @@ public class Solver {
 
     private int[][] copy2DInt(int[][] array) {
         int[][] result = new int[array.length][];
-        for (int i = 0; i < result.length; i++) {
+        for (int i = 0; i < result.length; i++)
             result[i] = array[i].clone();
-        }
         return result;
     }
 }
