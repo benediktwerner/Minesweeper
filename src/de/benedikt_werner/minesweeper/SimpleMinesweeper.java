@@ -42,7 +42,7 @@ public class SimpleMinesweeper implements Minesweeper {
     }
 
     private void generate(Point start) {
-        if (bombs + 1 > width*height) {
+        if (bombs + 9 > width*height) {
             throw new IllegalArgumentException("Too many bombs: " + bombs + " bombs on " + (width*height) + " squares.");
         }
         
@@ -62,7 +62,8 @@ public class SimpleMinesweeper implements Minesweeper {
         LinkedList<Point> possibleBombs = new LinkedList<Point>();
         for (int x = 0; x < height; x++) {
             for (int y = 0; y < width; y++) {
-                if (x == start.x && y == start.y)
+                if (x >= start.x-1 && x <= start.x+1
+                        && y >= start.y-1 && y <= start.y+1)
                     continue;
                 possibleBombs.add(new Point(x, y));
             }

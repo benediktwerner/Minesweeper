@@ -4,8 +4,6 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 
-import javax.swing.JFrame;
-
 public class Windows10Minesweeper extends WindowsMinesweeper {
     private static final int IMAGE_OFFSET_X = 120, IMAGE_OFFSET_Y = 200;
 
@@ -46,27 +44,21 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
 
         findTopLeftCorner(img);
-        System.out.printf("Found top left corner: (%d|%d)\n", topLeft.x, topLeft.y);
-
         findBottomRightCorner(img);
-        System.out.printf("Found bottom right corner: (%d|%d)\n", bottomRight.x, bottomRight.y);
-        
+
         windowLocation.x += IMAGE_OFFSET_X + topLeft.x;
         windowLocation.y += IMAGE_OFFSET_Y + topLeft.y;
         windowLocation.width = bottomRight.x - topLeft.x;
         windowLocation.height = bottomRight.y - topLeft.y;
-        showCornerFrames();
-        
-        // DEBUG STUFF
-        //Util.saveImage(img);
-        //Util.saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
 
         findWidthAndHeight(img);
+
+        showCornerFrames();
         totalBombs = Util.readInt("Bombs: ");
+        hideCornerFrames();
+        
         if (totalBombs == -1)
             throw new IllegalStateException("No bombs found");
-
-        hideCornerFrames();
 
         squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
         halfSquareWidth = squareWidth / 2;
@@ -74,10 +66,10 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         gameOver = false;
 
         // DEBUG STUFF: save image of first square
-        // System.out.println(squareWidth + ", " + halfSquareWidth);
-        // int x = topLeft.x + squareWidth + halfSquareWidth;
-        // int y = topLeft.y + squareWidth + halfSquareWidth;
-        // Util.saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
+        //System.out.println(squareWidth + ", " + halfSquareWidth);
+        //int x = topLeft.x + squareWidth + halfSquareWidth;
+        //int y = topLeft.y + squareWidth + halfSquareWidth;
+        //Util.saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
     }
 
     private void findTopLeftCorner(BufferedImage img) {
@@ -85,6 +77,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             for (int i = 0; i < y; i++)
                 if (!isBlack(img.getRGB(i, y-i))) {
                     topLeft = new Point(i, y-i);
+                    System.out.printf("Found top left corner: (%d|%d)\n", topLeft.x, topLeft.y);
                     return;
                 }
         throw new IllegalStateException("No top left corner found");
@@ -98,18 +91,10 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             for (int i = 1; i < y; i++)
                 if (!isBlack(img.getRGB(imgWidth - i, imgHeight - y + i))) {
                     bottomRight = new Point(imgWidth - i, imgHeight - y + i);
+                    System.out.printf("Found bottom right corner: (%d|%d)\n", bottomRight.x, bottomRight.y);
                     return;
                 }
         throw new IllegalStateException("No bottom right corner found");
-    }
-
-    private void showCornerFrames() {
-        cornerFrames = Util.createCornerFrames(windowLocation);
-    }
-
-    private void hideCornerFrames() {
-        for (JFrame frame : cornerFrames)
-            frame.dispose();
     }
 
     private void findWidthAndHeight(BufferedImage img) {
@@ -167,22 +152,6 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         return board;
     }
 
-    private int[][] detectBoard(BufferedImage img) {
-        int[][] board = new int[width][height];
-
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                int i = detectNumber(img, x, y);
-                if (i == -10) {
-                    gameOver = true;
-                    return null;
-                }
-                else board[x][y] = i;
-            }
-        }
-        return board;
-    }
-
     private boolean detectGameOverDialog(BufferedImage img) {
         int midX = img.getWidth() / 2;
         int midY = img.getHeight() / 2;
@@ -199,7 +168,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
     /**
      * @return -10: bomb, -2: unknown, -1: flag, 0: empty, 1+: number
      */
-    private int detectNumber(BufferedImage img, int x, int y){
+    protected int detectNumber(BufferedImage img, int x, int y){
         int imgX = (x * squareWidth) + halfSquareWidth;
         int imgY = (y * squareWidth) + halfSquareWidth;
 
@@ -208,8 +177,8 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         boolean hasColorOfBlank = false;
 
         // Take a 25x25 area of pixels
-        for(int i = imgX-12; i <= imgX+12; i++) {
-            for(int j = imgY-12; j <= imgY+12; j++) {
+        for (int i = imgX-12; i <= imgX+12; i++) {
+            for (int j = imgY-12; j <= imgY+12; j++) {
                 Color pixel = new Color(img.getRGB(i,j));
 
                 if (Util.colorDifference(pixel, BOMB_COLOR) < 30)
@@ -237,16 +206,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
     }
 
     private boolean isBlack(int color) {
-        int red = (color >> 16) & 0xFF;
-        int green = (color >> 8) & 0xFF;
-        int blue = color & 0xFF;
-        return (red < 60 && green < 65 && blue < 70);
-    }
-
-    @Override
-    public Point boardToScreen(int x, int y) {
-        return new Point(
-                windowLocation.x + (x * squareWidth) + halfSquareWidth,
-                windowLocation.y + (y * squareWidth) + halfSquareWidth);
+        Color c = new Color(color);
+        return (c.getRed() < 60 && c.getGreen() < 65 && c.getBlue() < 70);
     }
 }

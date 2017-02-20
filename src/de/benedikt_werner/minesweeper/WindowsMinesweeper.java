@@ -24,6 +24,8 @@ public abstract class WindowsMinesweeper implements Minesweeper {
 
     protected JFrame[] cornerFrames;
 
+    protected abstract int detectNumber(BufferedImage img, int x, int y);
+
     public WindowsMinesweeper() {
         try {
             robot = new Robot();
@@ -31,8 +33,6 @@ public abstract class WindowsMinesweeper implements Minesweeper {
             throw new IllegalStateException("Unable to instantiate robot", e);
         }
     }
-
-    public abstract Point boardToScreen(int x, int y);
 
     public void click(int x, int y) {
         checkBoardDetected();
@@ -62,7 +62,7 @@ public abstract class WindowsMinesweeper implements Minesweeper {
     private void clickMouse(int buttons) {
         robot.mousePress(buttons);
         Util.sleep(DELAY_BETWEEN_CLICKS);
-        
+
         robot.mouseRelease(buttons);
         Util.sleep(DELAY_AFTER_CLICKS);
     }
@@ -75,10 +75,41 @@ public abstract class WindowsMinesweeper implements Minesweeper {
     protected BufferedImage takeScreenshot() {
         return robot.createScreenCapture(windowLocation);
     }
-    
+
     protected void checkBoardDetected() {
         if (!boardDetected)
             throw new IllegalStateException("No detected board");
+    }
+
+    protected void showCornerFrames() {
+        cornerFrames = Util.createCornerFrames(windowLocation);
+    }
+
+    protected void hideCornerFrames() {
+        for (JFrame frame : cornerFrames)
+            frame.dispose();
+    }
+
+    protected int[][] detectBoard(BufferedImage img) {
+        int[][] board = new int[width][height];
+
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                int i = detectNumber(img, x, y);
+                if (i == -10) {
+                    gameOver = true;
+                    return null;
+                }
+                else board[x][y] = i;
+            }
+        }
+        return board;
+    }
+
+    public Point boardToScreen(int x, int y) {
+        return new Point(
+                windowLocation.x + (x * squareWidth) + halfSquareWidth,
+                windowLocation.y + (y * squareWidth) + halfSquareWidth);
     }
 
     public int getWidth() {

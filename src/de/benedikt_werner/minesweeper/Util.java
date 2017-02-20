@@ -38,7 +38,7 @@ public class Util {
     
     public static void printCountdown(int start) throws InterruptedException {
         for (int i = 3; i > 0; i--) {
-            System.out.print(i + "..");
+            System.out.println(i);
             Thread.sleep(1000);
         }
     }

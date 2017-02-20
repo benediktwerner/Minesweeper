@@ -1,64 +1,91 @@
 package de.benedikt_werner.minesweeper;
 
+import java.awt.Color;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 
-import javax.swing.JFrame;
-
 public class Windows7Minesweeper extends WindowsMinesweeper {
-    protected static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
-    public int getImageOffsetX() {return IMAGE_OFFSET_X;}
-    public int getImageOffsetY() {return IMAGE_OFFSET_Y;}
+    private static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
 
-    protected void moveMouse(int x, int y) {
-        robot.mouseMove(
-                windowLocation.x + IMAGE_OFFSET_X + topLeft.x + (x * squareWidth) + halfSquareWidth,
-                windowLocation.y + IMAGE_OFFSET_Y + topLeft.y + (y * squareWidth) + halfSquareWidth
-                );
-        try {
-            Thread.sleep(DELAY_AFTER_MOUSE_MOVE);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
+    private static final Color GAME_OVER_DIALOG_COLOR = new Color(240, 240, 240);
+    private static final Color BOMB_COLOR = new Color(110, 110, 110);
+    private static final Color FLAG_COLOR = new Color(255, 0, 0);
+    private static final Color BLANK_COLOR = new Color(200, 210, 230);
+    private static final Color ONE_COLOR = new Color(65, 79, 188);
+    private static final Color TWO_COLOR = new Color(30, 105, 5);
+    private static final Color THREE_COLOR = new Color(165, 5, 5);
+    private static final Color FOUR_COLOR = new Color(0, 0, 140);
+    private static final Color FIVE_COLOR = new Color(125, 0, 5);
+    private static final Color SIX_COLOR = new Color(10, 120, 130);
 
     public static void main(String[] args) throws InterruptedException {
-        WindowsMinesweeper ms = new Windows7Minesweeper();
+        Windows7Minesweeper ms = new Windows7Minesweeper();
         System.out.println("Taking screenshot in 3 seconds...");
-        Thread.sleep(3000);
-        if (!ms.findBoardAndCallibrate()) return;
+        Util.sleep(300);
+        Util.printCountdown(3);
 
-        Thread.sleep(500);
-
-        Solver solver = new Solver();
-        solver.solve(ms);
-    }
-
-    public boolean findBoardAndCallibrate() {
-        // Find window
-        windowLocation = Util.getWindowLocation("Minesweeper");
-        if (windowLocation == null) {
-            System.out.println("No Minesweper window found!");
-            return false;
+        try {
+            ms.findBoardAndCallibrate();
+        } catch (IllegalStateException e) {
+            System.out.println("Failed to find board: " + e.getMessage());
+            return;
         }
 
-        // Find top left corner
-        boolean foundCorner = false;
+        Util.sleep(500);
+        new Solver(ms).solve();
+    }
+
+    public void findBoardAndCallibrate() {
+        windowLocation = Util.getWindowLocation("Minesweeper");
+        if (windowLocation == null)
+            throw new IllegalStateException("No Minesweper window found!");
+
         BufferedImage img = takeScreenshot();
+        img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
+
+        findTopLeftCorner(img);
+        findBottomRightCorner(img);
+
+        windowLocation.x += IMAGE_OFFSET_X + topLeft.x;
+        windowLocation.y += IMAGE_OFFSET_Y + topLeft.y;
+        windowLocation.width = bottomRight.x - topLeft.x;
+        windowLocation.height = bottomRight.y - topLeft.y;
+
+        findWidthAndHeight(img);
+
+        showCornerFrames();
+        totalBombs = Util.readInt("Bombs: ");
+        hideCornerFrames();
+
+        if (totalBombs == -1)
+            throw new IllegalStateException("No bombs found");
+
+        squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
+        halfSquareWidth = squareWidth / 2;
+        boardDetected = true;
+        gameOver = false;
+
+        // DEBUG STUFF
+        //System.out.println(squareWidth + ", " + halfSquareWidth);
+        //int x = topLeft.x + squareWidth + halfSquareWidth;
+        //int y = topLeft.y + squareWidth + halfSquareWidth;
+        //saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
+    }
+
+    private void findTopLeftCorner(BufferedImage img) {
         for (int y = 0; y < img.getHeight(); y++) {
             for (int x = 0; x < img.getWidth(); x++) {
                 if (Util.isBlack(img.getRGB(x, y))) {
                     topLeft = new Point(x, y);
-                    foundCorner = true;
-                    break;
+                    System.out.printf("(%d|%d)\n", topLeft.x, topLeft.y);
+                    return;
                 }
             }
-            if (foundCorner) break;
         }
-        if (!foundCorner) return false;
-        System.out.printf("(%d|%d)\n", topLeft.x, topLeft.y);
+        throw new IllegalStateException("No top left corner found");
+    }
 
-        //Find bottom right corner
+    private void findBottomRightCorner(BufferedImage img) {
         int rightX = -1, bottomY = -1;
         for (int x = topLeft.x; x < img.getWidth(); x++) {
             if (!Util.isBlack(img.getRGB(x, topLeft.y))) {
@@ -72,27 +99,20 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
                 break;
             }
         }
-        if (rightX == -1) rightX = img.getWidth() - 1;
-        if (bottomY == -1) bottomY = img.getHeight() - 1;
+        if (rightX == -1)
+            rightX = img.getWidth() - 1;
+        if (bottomY == -1)
+            bottomY = img.getHeight() - 1;
         bottomRight = new Point(rightX, bottomY);
-
         System.out.printf("(%d|%d)\n", bottomRight.x, bottomRight.y);
-        //saveImage(img);
-        //saveImage(img.getSubimage(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y));
+    }
 
-        JFrame[] corners =  new JFrame[4];
-        corners[0] = createCornerFrame(topLeft);
-        corners[1] = createCornerFrame(bottomRight);
-        corners[2] = createCornerFrame(new Point(topLeft.x, bottomRight.y));
-        corners[3] = createCornerFrame(new Point(bottomRight.x, topLeft.y));
-
-        //Find width and height
+    private void findWidthAndHeight(BufferedImage img) {
         Point innerCorner = null;
         for (int i = 1; i < 10; i++)
             if (!Util.isBlack(img.getRGB(topLeft.x + i, topLeft.y + i)))
                 innerCorner = new Point(topLeft.x + i, topLeft.y + i);
 
-        // Auto detection failed
         if (innerCorner != null) {
             width = 0;
             boolean onSquare = true;
@@ -101,9 +121,8 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
                     onSquare = false;
                     width++;
                 }
-                else if (!onSquare && !Util.isBlack(img.getRGB(x, innerCorner.y))) {
+                else if (!onSquare && !Util.isBlack(img.getRGB(x, innerCorner.y)))
                     onSquare = true;
-                }
             }
             height = 0;
             onSquare = true;
@@ -112,199 +131,100 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
                     onSquare = false;
                     height++;
                 }
-                else if (!onSquare && !Util.isBlack(img.getRGB(innerCorner.x, y))) {
+                else if (!onSquare && !Util.isBlack(img.getRGB(innerCorner.x, y)))
                     onSquare = true;
-                }
             }
         }
 
         if (innerCorner == null || width == 0 || height == 0) {
-            width = readInt("Width: ");
-            if (width == -1) return false;
-            height = readInt("Height: ");
-            if (height == -1) return false;
+            System.out.println("Automatic width and height detection failed.");
+            width = Util.readInt("Width: ");
+            if (width == -1)
+                throw new IllegalStateException("No width found");
+            height = Util.readInt("Height: ");
+            if (height == -1)
+                throw new IllegalStateException("No height found");
         }
-        System.out.printf("%d %d\n", width, height);
-
-        // Ask for number of bombs
-        totalBombs = readInt("Bombs: ");
-        for (JFrame frame : corners) frame.dispose();
-        if (totalBombs == -1) return false;
-
-        // Calculate values
-        squareWidth = Math.round((bottomRight.x - topLeft.x) / (float) width);
-        halfSquareWidth = squareWidth / 2;
-        boardDetected = true;
-        gameOver = false;
-
-        //		System.out.println(squareWidth + ", " + halfSquareWidth);
-        //		int x = topLeft.x + squareWidth + halfSquareWidth;
-        //		int y = topLeft.y + squareWidth + halfSquareWidth;
-        //		saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
-        return true;
+        else System.out.printf("Detected width and height of board: %dx%d\n", width, height);
     }
 
     public int[][] getBoard() {
-        if (!boardDetected) throw new IllegalStateException("No detected board");
+        checkBoardDetected();
 
         moveMouse(-1, -1);
         BufferedImage img = takeScreenshot();
 
-        int midX = img.getWidth() / 2;
-        int midY = img.getHeight() / 2;
-
-        // Try to detect game over dialog box
-        int countWhite = 0;
-        for (int x = midX - 20; x < midX + 20; x++) {
-            for (int y = midY - 20; y < midY + 20; y++) {
-                int rgb = img.getRGB(x, y);
-                int red = (rgb >> 16) & 0xFF;
-                int green = (rgb >> 8) & 0xFF;
-                int blue = rgb & 0xFF;
-                if (colorDifference(red, green, blue, 240, 240, 240) < 12) countWhite++;
-            }
-        }
-        if (countWhite > 1100) {
+        if (detectGameOverDialog(img)) {
             gameOver = true;
             return null;
         }
 
-        int[][] board = new int[width][height];
-
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                int i = detect_number(img, x, y);
-                if (i == -10) return null;
-                else board[x][y] = i;
-            }
-        }
-
-        // Print
-        String line = "+";
-        for (int i = 0; i < board.length; i++) {
-            line += "-";
-        }
-        System.out.println(line + "+");
-
-        for (int y = 0; y < board[0].length; y++) {
-            String s = "|";
-            for (int x = 0; x < board.length; x++) {
-                switch (board[x][y]) {
-                    case -2: s += "*"; break;
-                    case -1: s += "X"; break;
-                    case  0: s += " "; break;
-                    default: s += board[x][y] + "";
-                }
-            }
-            System.out.println(s + "|");
-        }
-        System.out.println(line + "+");
+        int[][] board = detectBoard(img);
+        if (board != null)
+            Util.printBoard(board);
 
         return board;
+    }
+
+    private boolean detectGameOverDialog(BufferedImage img) {
+        int midX = img.getWidth() / 2;
+        int midY = img.getHeight() / 2;
+        int countWhite = 0;
+
+        for (int x = midX - 20; x < midX + 20; x++)
+            for (int y = midY - 20; y < midY + 20; y++)
+                if (Util.colorDifference(new Color(img.getRGB(x, y)), GAME_OVER_DIALOG_COLOR) < 12)
+                    countWhite++;
+        return (countWhite > 1100);
     }
 
     /**
      * @return -10: bomb, -2: unknown, -1: flag, 0: empty, 1+: number
      */
-    protected int detect_number(BufferedImage img, int x, int y){
-        int imgX = topLeft.x + x * squareWidth + halfSquareWidth;
-        int imgY = topLeft.y + y * squareWidth + halfSquareWidth;
-
-        // Take a 15x15 area of pixels
-        int areapix[] = new int[625];
-        int count = 0;
-        for(int i = imgX-12; i <= imgX+12; i++) {
-            for(int j = imgY-12; j <= imgY+12; j++){
-                areapix[count] = img.getRGB(i,j);
-                count++;
-            }
-        }
+    protected int detectNumber(BufferedImage img, int x, int y){
+        int imgX = x * squareWidth + halfSquareWidth;
+        int imgY = y * squareWidth + halfSquareWidth;
 
         boolean hasColorOfOneSquare = false;
         boolean hasColorOfBlank = false;
-        boolean isRelativelyHomogenous = true;
 
-        for(int rgb : areapix){
-            int red = (rgb >> 16) & 0xFF;
-            int green = (rgb >> 8) & 0xFF;
-            int blue = rgb & 0xFF;
+        // Take a 25x25 area of pixels
+        for (int i = imgX-12; i <= imgX+12; i++) {
+            for (int j = imgY-12; j <= imgY+12; j++) {
+                Color pixel = new Color(img.getRGB(i,j));
 
-            // Detect death
-            if(colorDifference(red, green, blue, 110,110,110) < 20) {
-                gameOver = true;
-                return -10;
+                if (Util.colorDifference(pixel, BOMB_COLOR) < 20)
+                    return -10;
+                else if (Util.colorDifference(pixel, FLAG_COLOR) < 30)
+                    return -1;
+
+                if (Util.colorDifference(pixel, ONE_COLOR) < 20)
+                    hasColorOfOneSquare = true;
+
+                if (pixel.getBlue() > pixel.getRed() && pixel.getBlue() > pixel.getGreen()
+                        && pixel.getGreen() > pixel.getRed()
+                        && Util.colorDifference(pixel, BLANK_COLOR) < 100)
+                    hasColorOfBlank = true;
+
+                if (Util.colorDifference(pixel, THREE_COLOR) < 30) return 3;
+                if (Util.colorDifference(pixel, TWO_COLOR) < 30)   return 2;
+                if (Util.colorDifference(pixel, FOUR_COLOR) < 30)  return 4;
+                if (Util.colorDifference(pixel, FIVE_COLOR) < 30)  return 5;
+                if (Util.colorDifference(pixel, SIX_COLOR) < 30)   return 6;
+                if (hasColorOfOneSquare && hasColorOfBlank)        return 1;
             }
-
-            // Detect flagging of any sort
-            if(colorDifference(red,green,blue,255,0,0) < 30)
-                return -1;
-
-            if(colorDifference(red, green, blue, 65,79,188) < 20)
-                hasColorOfOneSquare = true;
-
-            if(blue > red && blue > green && green > red &&
-                    colorDifference(red, green, blue, 200,210,230) < 100){
-                hasColorOfBlank = true;
-            }
-            if(colorDifference(red, green, blue, 165,5,5) < 30) 	return 3; //detect_3_7(areapix); //TODO: check 3 <-> 7
-            if(colorDifference(red, green, blue, 30,105,5) < 30)	return 2;
-            if(colorDifference(red, green, blue, 0,0,140) < 30)		return 4;
-            if(colorDifference(red, green, blue, 125,0,5) < 30)		return 5;
-            if(colorDifference(red, green, blue, 10,120,130) < 30)	return 6;
-            if(hasColorOfOneSquare && hasColorOfBlank)				return 1;
         }
 
         // Determine how 'same' the area is.
         // This is to separate the empty areas which are relatively the same from
         // the unexplored areas which have a gradient of some sort.
-        int rgb00 = areapix[0];
-        int red00 = (rgb00 >> 16) & 0xFF;
-        int green00 = (rgb00 >> 8) & 0xFF;
-        int blue00 = rgb00 & 0xFF;
-        for(int rgb : areapix){
-            int red = (rgb >> 16) & 0xFF;
-            int green = (rgb >> 8) & 0xFF;
-            int blue = rgb & 0xFF;
-            if(colorDifference(red, green, blue, red00, green00, blue00) > 50){
-                isRelativelyHomogenous = false;
-                break;
-            }
-        }
+        Color c0 = new Color(img.getRGB(imgX-12, imgY-12));
+        for (int i = imgX-12; i <= imgX+12; i++)
+            for (int j = imgY-12; j <= imgY+12; j++)
+                if (Util.colorDifference(new Color(img.getRGB(i,j)), c0) > 50)
+                    return -2;
 
-        if(hasColorOfBlank && isRelativelyHomogenous)
-            return 0;
-
-        return -2;
-    }
-
-    protected int detect_3_7(int[] areapix){
-        // Assume it's length 225 and dimensions 15x15.
-        // Classify each pixel as red or not.
-        // Since we don't have to deal with 5, we can take a greater liberty
-        // in deciding on red pixels.
-
-        boolean redx[][] = new boolean[15][15];
-        for(int k=0; k<225; k++){
-            int i = k % 15;
-            int j = k / 15;
-            int rgb = areapix[k];
-            int red = (rgb >> 16) & 0xFF;
-            int green = (rgb >> 8) & 0xFF;
-            int blue = rgb & 0xFF;
-
-            if(colorDifference(red, green, blue, 170, 0, 0) < 100)
-                redx[i][j] = true;
-        }
-
-        // . . .
-        //   x
-        for(int i=0; i<13; i++){
-            for(int j=0; j<13; j++){
-                if(!redx[i][j] && !redx[i][j+1] && !redx[i][j+2] && redx[i+1][j+1])
-                    return 3;
-            }
-        }
-
-        return 7;
+        if (hasColorOfBlank) return 0;
+        else return -2;
     }
 }
