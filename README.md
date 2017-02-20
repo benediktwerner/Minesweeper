@@ -8,4 +8,4 @@ Run `SimpleMinesweeper` to play the game.
 
 Run `Windows7Minesweeper` to solve the Windows 7 version and `Windows10Minesweeper` for the Windows 10 version. After 3 seconds the program will automatically detect an open Minesweeper game and play it by taking screenshots, analyzing them, calculating the best move and then moving the mouse to execute that move. It should always find the best possible move. If there is no save move the solver will click the square that has the lowest probability to be a bomb.
 
-**Note:** The Windows 7 version sometimes has problems detecting the squares at the top left corner on large boards.
+**Note:** The Windows 7 version sometimes has problems detecting the squares at the top left corner on very large boards. Try using smaller board sizes if you encounter problems. It should work fine until about 16x16. 
