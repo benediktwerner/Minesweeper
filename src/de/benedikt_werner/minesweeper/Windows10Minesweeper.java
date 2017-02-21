@@ -5,7 +5,9 @@ import java.awt.Point;
 import java.awt.image.BufferedImage;
 
 public class Windows10Minesweeper extends WindowsMinesweeper {
-    private static final int IMAGE_OFFSET_X = 120, IMAGE_OFFSET_Y = 200;
+    private static final int IMAGE_OFFSET_X = 30, IMAGE_OFFSET_TOP = 130, IMAGE_OFFSET_BOTTOM = 100;
+    private static final int NUMBER_DETECTION_PIXELS = 10;
+    private static final int NUMBER_DETECTION_PIXELS_HALF = NUMBER_DETECTION_PIXELS / 2;
 
     private static final Color BOMB_COLOR = new Color(0, 20, 60);
     private static final Color FLAG_COLOR = new Color(250, 205, 60);
@@ -18,7 +20,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
 
     public static void main(String[] args) throws InterruptedException {
         Windows10Minesweeper ms = new Windows10Minesweeper();
-        System.out.print("Taking screenshot in 3 seconds...");
+        System.out.println("Taking screenshot in 3 seconds...");
         Util.sleep(300);
         Util.printCountdown(3);
 
@@ -41,13 +43,16 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             throw new IllegalStateException("No Minesweper window found!");
 
         BufferedImage img = takeScreenshot();
-        img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
-
+        img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_TOP,
+                img.getWidth() - 2 * IMAGE_OFFSET_X,
+                img.getHeight() - IMAGE_OFFSET_TOP - IMAGE_OFFSET_BOTTOM);
+        
         findTopLeftCorner(img);
         findBottomRightCorner(img);
+        checkCornerLocations(img);
 
         windowLocation.x += IMAGE_OFFSET_X + topLeft.x;
-        windowLocation.y += IMAGE_OFFSET_Y + topLeft.y;
+        windowLocation.y += IMAGE_OFFSET_TOP + topLeft.y;
         windowLocation.width = bottomRight.x - topLeft.x;
         windowLocation.height = bottomRight.y - topLeft.y;
 
@@ -64,12 +69,6 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         halfSquareWidth = squareWidth / 2;
         boardDetected = true;
         gameOver = false;
-
-        // DEBUG STUFF: save image of first square
-        //System.out.println(squareWidth + ", " + halfSquareWidth);
-        //int x = topLeft.x + squareWidth + halfSquareWidth;
-        //int y = topLeft.y + squareWidth + halfSquareWidth;
-        //Util.saveImage(takeScreenshot().getSubimage(x - 7, y - 7, 15, 15));
     }
 
     private void findTopLeftCorner(BufferedImage img) {
@@ -99,11 +98,10 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
 
     private void findWidthAndHeight(BufferedImage img) {
         Point innerCorner = new Point(topLeft.x + 15, topLeft.y + 15);
-        Point innerCornerEnd = new Point(bottomRight.x + 5, bottomRight.y + 5);
 
         width = 0;
         boolean onSquare = true;
-        for (int x = innerCorner.x; x <= innerCornerEnd.x; x++) {
+        for (int x = innerCorner.x; x <= bottomRight.x; x++) {
             if (onSquare && isBlack(img.getRGB(x, innerCorner.y))) {
                 onSquare = false;
                 width++;
@@ -111,10 +109,11 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             else if (!onSquare && !isBlack(img.getRGB(x, innerCorner.y)))
                 onSquare = true;
         }
+        if (onSquare) width++;
 
         height = 0;
         onSquare = true;
-        for (int y = innerCorner.y; y <= innerCornerEnd.y; y++) {
+        for (int y = innerCorner.y; y <= bottomRight.y; y++) {
             if (onSquare && isBlack(img.getRGB(innerCorner.x, y))) {
                 onSquare = false;
                 height++;
@@ -122,6 +121,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             else if (!onSquare && !isBlack(img.getRGB(innerCorner.x, y)))
                 onSquare = true;
         }
+        if (onSquare) height++;
 
         if (width == 0 || height == 0) {
             System.out.println("Automatic width and height detection failed.");
@@ -145,11 +145,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
             gameOver = true;
             return null;
         }
-        int[][] board = detectBoard(img);
-        if (board != null)
-            Util.printBoard(board);
-
-        return board;
+        return detectBoard(img);
     }
 
     private boolean detectGameOverDialog(BufferedImage img) {
@@ -176,9 +172,8 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         boolean hasColorOfFive = false;
         boolean hasColorOfBlank = false;
 
-        // Take a 25x25 area of pixels
-        for (int i = imgX-12; i <= imgX+12; i++) {
-            for (int j = imgY-12; j <= imgY+12; j++) {
+        for (int i = imgX-NUMBER_DETECTION_PIXELS_HALF; i <= imgX+NUMBER_DETECTION_PIXELS_HALF; i++) {
+            for (int j = imgY-NUMBER_DETECTION_PIXELS_HALF; j <= imgY+NUMBER_DETECTION_PIXELS_HALF; j++) {
                 Color pixel = new Color(img.getRGB(i,j));
 
                 if (Util.colorDifference(pixel, BOMB_COLOR) < 30)

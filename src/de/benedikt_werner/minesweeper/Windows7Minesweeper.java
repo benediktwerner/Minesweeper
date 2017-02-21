@@ -5,7 +5,9 @@ import java.awt.Point;
 import java.awt.image.BufferedImage;
 
 public class Windows7Minesweeper extends WindowsMinesweeper {
-    private static final int IMAGE_OFFSET_X = 50, IMAGE_OFFSET_Y = 150;
+    private static final int IMAGE_OFFSET_X = 30, IMAGE_OFFSET_Y = 80;
+    private static final int NUMBER_DETECTION_PIXELS = 15;
+    private static final int NUMBER_DETECTION_PIXELS_HALF = NUMBER_DETECTION_PIXELS / 2;
 
     private static final Color GAME_OVER_DIALOG_COLOR = new Color(240, 240, 240);
     private static final Color BOMB_COLOR = new Color(110, 110, 110);
@@ -41,10 +43,11 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
             throw new IllegalStateException("No Minesweper window found!");
 
         BufferedImage img = takeScreenshot();
-        img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_X - IMAGE_OFFSET_Y);
+        img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_Y, img.getWidth() - 2 * IMAGE_OFFSET_X, img.getHeight() - IMAGE_OFFSET_Y);
 
         findTopLeftCorner(img);
         findBottomRightCorner(img);
+        checkCornerLocations(img);
 
         windowLocation.x += IMAGE_OFFSET_X + topLeft.x;
         windowLocation.y += IMAGE_OFFSET_Y + topLeft.y;
@@ -188,9 +191,8 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         boolean hasColorOfOneSquare = false;
         boolean hasColorOfBlank = false;
 
-        // Take a 25x25 area of pixels
-        for (int i = imgX-12; i <= imgX+12; i++) {
-            for (int j = imgY-12; j <= imgY+12; j++) {
+        for (int i = imgX-NUMBER_DETECTION_PIXELS_HALF; i <= imgX+NUMBER_DETECTION_PIXELS_HALF; i++) {
+            for (int j = imgY-NUMBER_DETECTION_PIXELS_HALF; j <= imgY+NUMBER_DETECTION_PIXELS_HALF; j++) {
                 Color pixel = new Color(img.getRGB(i,j));
 
                 if (Util.colorDifference(pixel, BOMB_COLOR) < 20)
@@ -218,9 +220,9 @@ public class Windows7Minesweeper extends WindowsMinesweeper {
         // Determine how 'same' the area is.
         // This is to separate the empty areas which are relatively the same from
         // the unexplored areas which have a gradient of some sort.
-        Color c0 = new Color(img.getRGB(imgX-12, imgY-12));
-        for (int i = imgX-12; i <= imgX+12; i++)
-            for (int j = imgY-12; j <= imgY+12; j++)
+        Color c0 = new Color(img.getRGB(imgX-NUMBER_DETECTION_PIXELS_HALF, imgY-NUMBER_DETECTION_PIXELS_HALF));
+        for (int i = imgX-NUMBER_DETECTION_PIXELS_HALF; i <= imgX+NUMBER_DETECTION_PIXELS_HALF; i++)
+            for (int j = imgY-NUMBER_DETECTION_PIXELS_HALF; j <= imgY+NUMBER_DETECTION_PIXELS_HALF; j++)
                 if (Util.colorDifference(new Color(img.getRGB(i,j)), c0) > 50)
                     return -2;
 

@@ -105,6 +105,13 @@ public abstract class WindowsMinesweeper implements Minesweeper {
         }
         return board;
     }
+    
+    protected void checkCornerLocations(BufferedImage img) {
+        if (topLeft.x <= 0 || topLeft.y <= 0
+                || bottomRight.x+1 >= img.getWidth()
+                || bottomRight.y+1 >= img.getHeight())
+            throw new IllegalStateException("Corners are outside of screenshot");
+    }
 
     public Point boardToScreen(int x, int y) {
         return new Point(

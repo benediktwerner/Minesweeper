@@ -10,6 +10,7 @@ public class Solver {
 
     // If bombs < LIMIT the solver will also check non-border squares
     private static final int COMPLETE_SOLVER_LIMIT = 15;
+    private static final boolean PLACE_FLAGS = true;
 
     private boolean[][] flags;
     private boolean[][] solved;
@@ -22,7 +23,7 @@ public class Solver {
     private ArrayList<Point> borderList;
     private Minesweeper ms;
     private int width, height, bombsLeft, noBoardCounter;
-    private boolean changeMade, recurseComplete, didResetSolved;
+    private boolean changeMade, recurseComplete;
 
     public Solver(Minesweeper minesweeper) {
         ms = minesweeper;
@@ -33,14 +34,18 @@ public class Solver {
         solved = new boolean[width][height];
         bombsAround = new int[width][height];
         noBoardCounter = 0;
-        didResetSolved = false;
     }
 
     public void solve() {
-        click(new Point(width / 2, height / 2), "Startup");
+        click(new Point(width / 2, height / 2));
         Util.sleep(100);
-        while (!ms.isGameOver() && noBoardCounter < 10)
-            nextMove();
+        
+        try {
+            while (!ms.isGameOver() && noBoardCounter < 10)
+                nextMove();
+        } catch (IllegalStateException e) {
+            System.out.println("Aborted solving: " + e.getMessage());
+        }
 
         if (noBoardCounter >= 10)
             System.out.println("Aborted solving: Unable to detect board");
@@ -65,7 +70,7 @@ public class Solver {
         if (!borderSquares.isEmpty() || recurseComplete) {
             backtrackSolver();
             if (!changeMade)
-                clickRandom();
+                probabilitySolver();
         }
         else {
             System.out.println("No border squares found!");
@@ -80,10 +85,7 @@ public class Solver {
             Util.sleep(100);
             return false;
         }
-        else {
-            noBoardCounter = 0;
-            return true;
-        }
+        else return true;
     }
 
     private void simpleDeduction() {
@@ -92,7 +94,7 @@ public class Solver {
                 if (!solved[x][y]) {
                     switch (board[x][y]) {
                         case -2: unopendSquares.add(new Point(x, y)); break;
-                        case -1: solved[x][y] = true; break;
+                        case -1: solved[x][y] = true; flags[x][y] = true; break;
                         case  0: solved[x][y] = true; break;
                         default: solved[x][y] = checkSquare(x, y);
                     }
@@ -113,22 +115,10 @@ public class Solver {
             borderList = new ArrayList<>(region);
             boolean[] borderBombs = new boolean[borderList.size()];
             combinations = new HashSet<>();
-
-            System.out.print("Checking region: ");
-            for (Point p : region) System.out.printf("(%d|%d)", p.x, p.y);
-            System.out.println();
-
             recurseCombinations(borderBombs, 0, 0);
 
-            if (combinations.isEmpty()) {
-                if (didResetSolved) throw new IllegalStateException("No possible combinations found!");
-                else {
-                    didResetSolved = true;
-                    solved = new boolean[width][height];
-                    return;
-                }
-            }
-            else didResetSolved = false;
+            if (combinations.isEmpty())
+                throw new IllegalStateException("No possible combinations found!");
 
             int[] bombCases = new int[borderList.size()];
             for (boolean[] b : combinations)
@@ -137,9 +127,9 @@ public class Solver {
 
             for (int i = 0; i < bombCases.length; i++) {
                 if (bombCases[i] == 0)
-                    click(borderList.get(i), "BacktrackSolver");
+                    click(borderList.get(i));
                 else if (bombCases[i] == combinations.size())
-                    flag(borderList.get(i), "BacktrackSolver");
+                    flag(borderList.get(i));
             }
 
             // Compute probabilities for probability solver
@@ -257,61 +247,49 @@ public class Solver {
 
         // Evaluate information
         if (!unopendSquares.isEmpty()) {
-            if (bombsAround[x][y] == board[x][y]) { // Enough bombs marked around
-                solved[x][y] = true;
-                ms.chord(x, y);
-            }
+            if (bombsAround[x][y] == board[x][y])// Enough bombs marked around
+                if (PLACE_FLAGS)
+                    ms.chord(x, y);
+                else unopendSquares.forEach(this::click);
             else if (bombsAround[x][y] + unopendSquares.size() == board[x][y]) // All unknowns around must be bombs
-                for (Point p : unopendSquares)
-                    flag(p, "SimpleSolver");
+                unopendSquares.forEach(this::flag);
             else {
                 borderSquares.add(new HashSet<Point>(unopendSquares));
                 return false;
             }
         }
-        else solved[x][y] = true;
         return true;
     }
 
-    private void click(Point p, String tag) {
-        System.out.printf("[%s]: Clicking %d|%d\n", tag, p.x, p.y);
+    private void click(Point p) {
         changeMade = true;
         ms.click(p);
     }
 
-    private void flag(Point p, String tag) {
+    private void flag(Point p) {
         if (flags[p.x][p.y])
             return;
-        System.out.printf("[%s]: Flagging %d|%d\n", tag, p.x, p.y);
-        ms.flag(p);
+        if (PLACE_FLAGS)
+            ms.flag(p);
         changeMade = true;
         flags[p.x][p.y] = true;
         solved[p.x][p.y] = true;
         bombsLeft--;
     }
 
-    private void clickRandom() {
+    private void probabilitySolver() {
         double minProb = Double.POSITIVE_INFINITY;
         Point minPoint = null;
         for (Point p : bombProbability.keySet()) {
             double prob = bombProbability.get(p);
-            System.out.printf("(%d|%d) - %.1f\n", p.x, p.y, prob);
             if (prob < minProb) {
                 minProb = prob;
                 minPoint = p;
             }
         }
-        if (minPoint == null) {
-            if (didResetSolved)
-                throw new IllegalStateException("No square left to click");
-            else {
-                didResetSolved = true;
-                solved = new boolean[width][height];
-                return;
-            }
-        }
-        else didResetSolved = false;
-        click(minPoint, "ProbabilitySolver");
+        if (minPoint == null)
+            throw new IllegalStateException("No square left to click");
+        click(minPoint);
     }
 
     private int[][] copy2DInt(int[][] array) {
