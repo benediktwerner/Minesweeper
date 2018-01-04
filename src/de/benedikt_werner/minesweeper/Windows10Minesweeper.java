@@ -28,7 +28,8 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
                 + "Detecting board...");
         try {
             ms.findBoardAndCallibrate();
-        } catch (IllegalStateException e) {
+        }
+        catch (IllegalStateException e) {
             System.out.println("Failed to find board: " + e.getMessage());
             return;
         }
@@ -46,7 +47,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         img = img.getSubimage(IMAGE_OFFSET_X, IMAGE_OFFSET_TOP,
                 img.getWidth() - 2 * IMAGE_OFFSET_X,
                 img.getHeight() - IMAGE_OFFSET_TOP - IMAGE_OFFSET_BOTTOM);
-        
+
         findTopLeftCorner(img);
         findBottomRightCorner(img);
         checkCornerLocations(img);
@@ -61,7 +62,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         showCornerFrames();
         totalBombs = Util.readInt("Bombs: ");
         hideCornerFrames();
-        
+
         if (totalBombs == -1)
             throw new IllegalStateException("No bombs found");
 
@@ -74,8 +75,8 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
     private void findTopLeftCorner(BufferedImage img) {
         for (int y = 0; y < img.getHeight(); y++)
             for (int i = 0; i < y; i++)
-                if (!isBlack(img.getRGB(i, y-i))) {
-                    topLeft = new Point(i, y-i);
+                if (!isBlack(img.getRGB(i, y - i))) {
+                    topLeft = new Point(i, y - i);
                     System.out.printf("Found top left corner: (%d|%d)\n", topLeft.x, topLeft.y);
                     return;
                 }
@@ -164,7 +165,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
     /**
      * @return -10: bomb, -2: unknown, -1: flag, 0: empty, 1+: number
      */
-    protected int detectNumber(BufferedImage img, int x, int y){
+    protected int detectNumber(BufferedImage img, int x, int y) {
         int imgX = (x * squareWidth) + halfSquareWidth;
         int imgY = (y * squareWidth) + halfSquareWidth;
 
@@ -172,9 +173,9 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         boolean hasColorOfFive = false;
         boolean hasColorOfBlank = false;
 
-        for (int i = imgX-NUMBER_DETECTION_PIXELS_HALF; i <= imgX+NUMBER_DETECTION_PIXELS_HALF; i++) {
-            for (int j = imgY-NUMBER_DETECTION_PIXELS_HALF; j <= imgY+NUMBER_DETECTION_PIXELS_HALF; j++) {
-                Color pixel = new Color(img.getRGB(i,j));
+        for (int i = imgX - NUMBER_DETECTION_PIXELS_HALF; i <= imgX + NUMBER_DETECTION_PIXELS_HALF; i++) {
+            for (int j = imgY - NUMBER_DETECTION_PIXELS_HALF; j <= imgY + NUMBER_DETECTION_PIXELS_HALF; j++) {
+                Color pixel = new Color(img.getRGB(i, j));
 
                 if (Util.colorDifference(pixel, BOMB_COLOR) < 30)
                     return -10;
@@ -185,18 +186,19 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
                     hasColorOfOne = true;
                 if (Util.colorDifference(pixel, FIVE_COLOR) < 20)
                     hasColorOfFive = true;
-                if(Util.colorDifference(pixel, BLANK_COLOR) < 10)
+                if (Util.colorDifference(pixel, BLANK_COLOR) < 10)
                     hasColorOfBlank = true;
 
                 //TODO: Missing 6,7 and 8
                 if (Util.colorDifference(pixel, THREE_COLOR) < 20) return 3;
-                if (Util.colorDifference(pixel, TWO_COLOR)   < 30) return 2;
-                if (Util.colorDifference(pixel, FOUR_COLOR)  < 25) return 4;
+                if (Util.colorDifference(pixel, TWO_COLOR) < 30) return 2;
+                if (Util.colorDifference(pixel, FOUR_COLOR) < 25) return 4;
                 if (hasColorOfBlank && hasColorOfFive) return 5;
                 if (hasColorOfOne && hasColorOfBlank) return 1;
             }
         }
-        if (hasColorOfBlank) return 0;
+        if (hasColorOfBlank)
+            return 0;
         else return -2;
     }
 
