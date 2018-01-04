@@ -35,7 +35,7 @@ public class Util {
 
         return new Rectangle(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
     }
-    
+
     public static void printCountdown(int start) throws InterruptedException {
         for (int i = 3; i > 0; i--) {
             System.out.println(i);
@@ -54,34 +54,43 @@ public class Util {
             String s = "|";
             for (int x = 0; x < board.length; x++) {
                 switch (board[x][y]) {
-                    case -2: s += "*"; break;
-                    case -1: s += "X"; break;
-                    case  0: s += " "; break;
-                    default: s += board[x][y] + "";
+                    case -2:
+                        s += "*";
+                        break;
+                    case -1:
+                        s += "X";
+                        break;
+                    case 0:
+                        s += " ";
+                        break;
+                    default:
+                        s += board[x][y] + "";
                 }
             }
             System.out.println(s + "|");
         }
         System.out.println(line);
     }
-    
+
     public static int readInt(String text) {
         while (true) {
             String s = JOptionPane.showInputDialog(null, text);
             if (s == null) return -1;
             try {
                 return Integer.parseInt(s.trim());
-            } catch (NumberFormatException e) {}
+            }
+            catch (NumberFormatException e) {
+            }
         }
     }
-    
+
     public static int colorDifference(Color c1, Color c2) {
         return Math.abs(c1.getRed() - c2.getRed())
                 + Math.abs(c1.getBlue() - c2.getBlue())
                 + Math.abs(c1.getGreen() - c2.getGreen());
     }
-    
-    public static int colorDifference(int r1, int g1, int b1, int r2, int g2, int b2){
+
+    public static int colorDifference(int r1, int g1, int b1, int r2, int g2, int b2) {
         return Math.abs(r1 - r2) + Math.abs(b1 - b2) + Math.abs(g1 - g2);
     }
 
@@ -93,23 +102,26 @@ public class Util {
     }
 
     public static void saveImage(BufferedImage img) {
-        File file = new File(System.getProperty("user.home") + "\\Downloads\\Minesweeper-"+System.currentTimeMillis()+".png");
+        File file = new File(System.getProperty("user.home") + "\\Downloads\\Minesweeper-" + System.currentTimeMillis() + ".png");
         try {
             ImageIO.write(img, "png", file);
             System.out.println("Saved image");
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
-    
+
     public static void sleep(long millis) {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
             e.printStackTrace();
+            throw new RuntimeException("Util.sleep() interrupted");
         }
     }
-    
+
     public static JFrame[] createCornerFrames(Rectangle window) {
         JFrame[] corners = new JFrame[4];
         corners[0] = createCornerFrame(window.x, window.y);
