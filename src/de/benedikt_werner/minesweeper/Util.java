@@ -12,6 +12,7 @@ import javax.swing.JOptionPane;
 
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.WinDef.HWND;
+import com.sun.jna.platform.win32.WinDef.RECT;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 
@@ -22,18 +23,48 @@ public class Util {
 
         HWND FindWindow(String lpClassName, String lpWindowName);
 
-        int GetWindowRect(HWND handle, int[] rect);
+        boolean GetWindowRect(HWND handle, RECT rect);
+
+        boolean SetCursorPos(int x, int y);
     }
 
     public static Rectangle getWindowLocation(String windowName) {
-        HWND hwnd = User32.INSTANCE.FindWindow(null, windowName);
-        if (hwnd == null) return null;
+        HWND hWnd = User32.INSTANCE.FindWindow(null, windowName);
+        if (hWnd == null) return null;
 
-        int[] rect = {0, 0, 0, 0};
-        int result = User32.INSTANCE.GetWindowRect(hwnd, rect);
-        if (result == 0) return null;
+        RECT rect = new RECT();
+        boolean result = User32.INSTANCE.GetWindowRect(hWnd, rect);
+        if (!result) return null;
 
-        return new Rectangle(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+        return winToJava(rect.toRectangle());
+    }
+
+    public static int winToJava(int x) {
+        return (int) (x * 0.8);
+    }
+
+    public static Rectangle winToJava(Rectangle rect) {
+        return new Rectangle(
+                winToJava(rect.x),
+                winToJava(rect.y),
+                winToJava(rect.width),
+                winToJava(rect.height));
+    }
+
+    public static int javaToWin(int x) {
+        return (int) (x * 1.25);
+    }
+
+    public static Rectangle javaToWin(Rectangle rect) {
+        return new Rectangle(
+                javaToWin(rect.x),
+                javaToWin(rect.y),
+                javaToWin(rect.width),
+                javaToWin(rect.height));
+    }
+
+    public static boolean setCursorPosition(int x, int y) {
+        return User32.INSTANCE.SetCursorPos(javaToWin(x), javaToWin(y));
     }
 
     public static void printCountdown(int start) throws InterruptedException {
@@ -124,6 +155,7 @@ public class Util {
 
     public static JFrame[] createCornerFrames(Rectangle window) {
         JFrame[] corners = new JFrame[4];
+        window = javaToWin(window);
         corners[0] = createCornerFrame(window.x, window.y);
         corners[1] = createCornerFrame(window.x + window.width, window.y);
         corners[2] = createCornerFrame(window.x, window.y + window.height);

@@ -39,11 +39,12 @@ public class Solver {
     public void solve() {
         click(new Point(width / 2, height / 2));
         Util.sleep(100);
-        
+
         try {
             while (!ms.isGameOver() && noBoardCounter < 10)
                 nextMove();
-        } catch (IllegalStateException e) {
+        }
+        catch (IllegalStateException e) {
             System.out.println("Aborted solving: " + e.getMessage());
         }
 
@@ -54,23 +55,23 @@ public class Solver {
 
     private void nextMove() {
         changeMade = false;
-        board =  ms.getBoard();
+        board = ms.getBoard();
         borderSquares = new LinkedList<>();
         unopendSquares = new HashSet<>();
         bombProbability = new HashMap<>();
 
         if (!boardExists())
             return;
-        
+
         simpleDeduction();
         if (changeMade)
             return;
-
         recurseComplete = (unopendSquares.size() < COMPLETE_SOLVER_LIMIT);
         if (!borderSquares.isEmpty() || recurseComplete) {
             backtrackSolver();
-            if (!changeMade)
+            if (!changeMade) {
                 probabilitySolver();
+            }
         }
         else {
             System.out.println("No border squares found!");
@@ -93,10 +94,18 @@ public class Solver {
             for (int y = 0; y < board[x].length; y++) {
                 if (!solved[x][y]) {
                     switch (board[x][y]) {
-                        case -2: unopendSquares.add(new Point(x, y)); break;
-                        case -1: solved[x][y] = true; flags[x][y] = true; break;
-                        case  0: solved[x][y] = true; break;
-                        default: solved[x][y] = checkSquare(x, y);
+                        case -2:
+                            unopendSquares.add(new Point(x, y));
+                            break;
+                        case -1:
+                            solved[x][y] = true;
+                            flags[x][y] = true;
+                            break;
+                        case 0:
+                            solved[x][y] = true;
+                            break;
+                        default:
+                            solved[x][y] = checkSquare(x, y);
                     }
                 }
             }
@@ -135,7 +144,7 @@ public class Solver {
             // Compute probabilities for probability solver
             if (!changeMade)
                 for (int i = 0; i < bombCases.length; i++)
-                    bombProbability.put(borderList.get(i), bombCases[i]*100.0 / combinations.size());
+                bombProbability.put(borderList.get(i), bombCases[i] * 100.0 / combinations.size());
         }
     }
 
@@ -208,7 +217,7 @@ public class Solver {
                 for (int y = (p.y > 0 ? p.y - 1 : 0); y < maxY; y++)
                     if (!solved[x][y] && board[x][y] > 0)
                         if (board[x][y] < bombsAroundCopy[x][y])
-                            return;
+                        return;
                         else if (board[x][y] != bombsAroundCopy[x][y])
                             combinationPerfect = false;
         }
@@ -224,9 +233,9 @@ public class Solver {
 
         // Recurse
         borderBombs[index] = true;
-        recurseCombinations(borderBombs, index+1, bombs+1);
+        recurseCombinations(borderBombs, index + 1, bombs + 1);
         borderBombs[index] = false;
-        recurseCombinations(borderBombs, index+1, bombs);
+        recurseCombinations(borderBombs, index + 1, bombs);
     }
 
     private boolean checkSquare(int x, int y) {

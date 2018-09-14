@@ -55,7 +55,7 @@ public abstract class WindowsMinesweeper implements Minesweeper {
     protected void moveMouse(int x, int y) {
         checkBoardDetected();
         final Point screenPoint = boardToScreen(x, y);
-        robot.mouseMove(screenPoint.x, screenPoint.y);
+        Util.setCursorPosition(screenPoint.x, screenPoint.y);
         Util.sleep(DELAY_AFTER_MOUSE_MOVE);
     }
 

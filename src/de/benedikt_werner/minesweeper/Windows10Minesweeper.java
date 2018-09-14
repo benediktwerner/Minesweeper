@@ -35,6 +35,7 @@ public class Windows10Minesweeper extends WindowsMinesweeper {
         }
 
         Util.sleep(500);
+        ms.moveMouse(0, 0);
         new Solver(ms).solve();
     }
 
